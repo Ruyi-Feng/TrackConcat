@@ -46,7 +46,7 @@ def param(label, features, target, var_num):
     parser.add_argument('--do_predict', action='store_true', help='whether to predict unseen future data')
 
     # optimization
-    parser.add_argument('--num_workers', type=int, default=4, help='data loader num workers')
+    parser.add_argument('--num_workers', type=int, default=0, help='data loader num workers')
     parser.add_argument('--use_amp', action='store_true', help='use automatic mixed precision training', default=False)
 
     # GPU
@@ -62,7 +62,7 @@ def param(label, features, target, var_num):
 
     args = parser.parse_args()
 
-    args.use_gpu = True if torch.cuda.is_available() and args.use_gpu else False
+    args.use_gpu = (torch.cuda.is_available() and args.use_gpu)
 
     fix_seed = args.seed
     random.seed(fix_seed)

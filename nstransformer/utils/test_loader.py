@@ -3,6 +3,7 @@ import pandas as pd
 from torch.utils.data import Dataset
 from sklearn.preprocessing import StandardScaler
 from nstransformer.utils.timefeatures import time_features
+import datetime as dt
 import warnings
 
 warnings.filterwarnings('ignore')
@@ -81,7 +82,8 @@ class Dataset_Pred(Dataset):
             df_stamp['hour'] = df_stamp.date.apply(lambda row: row.hour, 1)
             df_stamp['minute'] = df_stamp.date.apply(lambda row: row.minute, 1)
             df_stamp['minute'] = df_stamp.minute.map(lambda x: x // 15)
-            data_stamp = df_stamp.drop(['date'], 1).values
+            print(df_stamp.columns)
+            data_stamp = df_stamp.drop(['date'], axis=1).values
         elif self.timeenc == 1:
             data_stamp = time_features(pd.to_datetime(
                 df_stamp['date'].values), freq=self.freq)
