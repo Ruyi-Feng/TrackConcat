@@ -1,15 +1,18 @@
-from nstransformer.model.exp_test import Exp_Test
-from siamvgg.model.exp_siam import Exp_Siam
-import pandas as pd
 import copy
 import cv2
+from nstransformer.model.exp_test import Exp_Test
+import pandas as pd
+from siamvgg.model.exp_siam import Exp_Siam
 import torch
+
 
 class Trackconcat():
     """ func
-    1. 按照时序，历史数据段48-96，预测96。96范围内所有candi_id存成dict。
-    2. 每个break 包含：history，predict，imgfeature(siamvgg的对象)， 他的candidates
-    3. 每个candi的属性：id, distance, similarity, adjust_dis
+    demand
+    ------
+    1. break_list input in func conca
+    2. prepare track csv with id renew
+    3. prepare img of each obj and named of car_id.jpg
 
     breaks: dict
     ---
@@ -32,22 +35,24 @@ class Trackconcat():
     找candidate， generate
     """
     label_dict = {"HeadwaySpeed": ["date", "headway", "speed", "longitude"],
-                "HeadwaySpeedAcc": ["date", "headway", "speed", "acceleration", "longitude"],
-                "TTCSpeed": ["date", "ttc", "speed", "longitude"],
-                "TTCSpeedAcc": ["date", "ttc", "speed", "acceleration", "longitude"],
-                "withAcc": ["date", "acceleration", "longitude"],
-                "withHeadway": ["date", "headway", "longitude"],
-                "withLeaderPos": ["date", "leaderpos", "longitude"],
-                "withSpeed": ["date", "speed", "longitude"],
-                "withTTC": ["date", "ttc", "longitude"],}
+                  "HeadwaySpeedAcc": ["date", "headway", "speed", "acceleration", "longitude"],
+                  "TTCSpeed": ["date", "ttc", "speed", "longitude"],
+                  "TTCSpeedAcc": ["date", "ttc", "speed", "acceleration", "longitude"],
+                  "withAcc": ["date", "acceleration", "longitude"],
+                  "withHeadway": ["date", "headway", "longitude"],
+                  "withLeaderPos": ["date", "leaderpos", "longitude"],
+                  "withSpeed": ["date", "speed", "longitude"],
+                  "withTTC": ["date", "ttc", "longitude"], }
 
-    def __init__(self, args, params, dir, flnm):
+    def __init__(self, args, params, dir, flnm, dis_th=5, r=2.0):
         self.siam = Exp_Siam(params)
         self.nstrans = Exp_Test(args)
         self.dir = dir
         self.flnm = dir + "\\" + flnm
         self.seq_len = args.seq_len
         self.label = args.label
+        self.dis_th = dis_th
+        self.r = r
 
     def _init_breaks(self, frame, break_list):
         """
@@ -58,33 +63,79 @@ class Trackconcat():
         data = pd.read_csv(self.flnm)
         data = data.sort_values(by=["frame"], ascending=True)
         data = data.reset_index(drop=True)
-        pre = data.iloc[(data["frame"] <= frame) & (data["frame"] >= frame - self.seq_len)]
-        self.post = data.iloc[(data["frame"] > frame) & (data["frame"] <= frame + self.seq_len)]
+        pre = data.iloc[(data["frame"] <= frame) & (
+            data["frame"] >= frame - self.seq_len)]
+        self.post = data.iloc[(data["frame"] > frame) & (
+            data["frame"] <= frame + self.seq_len)]
         for id in break_list:
             tmp = pre.iloc[pre["car_id"] == id]
             lane = tmp["lane"][-1]
             tmp = tmp[self.label_dict[self.label]]
-            tmp_dict = copy.deepcopy(tmp.to_dict(orient = 'list'))
-            self.breaks.update({id: {"lane": lane, "history": {}, "predict": [], "candidates": {}, "select": -1}})
+            tmp_dict = copy.deepcopy(tmp.to_dict(orient='list'))
+            self.breaks.update(
+                {id: {"lane": lane, "history": {}, "predict": [], "candidates": {}, "select": -1}})
             self.breaks["history"].update(tmp_dict)
         self.breaks
 
-    def _dis(self, ):
-        pass
+    def adjust(self, dis, smlr):
+        return dis * (1 - smlr / self.r)
 
     def _candi(self, frame, output, lane):
-        candidates = dict()
+        """
+        input
+        -----
+        frame: int
+        where the track broken
+        output: np.array
+        the refer vehicle trace predicted
+        lane: int
+        which lane the refer vehilce in
+
+        return
+        -----
+        candidates: dict
+        as the candidates structure:
+        {
+            candi_1: {"distance": 10, "similarity": 0.5, "adjust_dis": 5},
+            candi_2: {"distance": 12, "similarity": 0.2, "adjust_dis": 9},
+        }
+        select: int
+        the candidates key with the shortest adjust_dis
+        """
+        cands = dict()
+        min_dis = self.dis_th
         group = self.post.iloc[self.post.iloc["lane"] == lane]
-        # 目前group里包含的是seq96的lane = lane的所有车辆轨迹
-        # 接下来直接找longitude，在frame中相距小于车长的。
-        # index = group["frame"][i] - frame
-        # group[now_frame]
-        pass
-
-
+        group = group.reset_index(drop=True)
+        for i in range(len(group)):
+            refer_long = output[group["frame"][i] - frame]
+            dis = abs(group["longitude"][i] - refer_long)
+            if dis > self.dis_th:
+                continue
+            cands.setdefault(group["car_id"][i],
+                             {"distance": self.dis_th,
+                              "similarity": 0,
+                              "adjust_dis": self.dis_th})
+            cands[group["car_id"][i]]["distance"] = min(
+                dis, cands[group["car_id"][i]])
+            candi_img = cv2.imread(dir+"\\%d.jpg" %
+                                   group["car_id"][i])  # 此处可以考虑改成多候选一起
+            smlr = self.siam.compare_candidates([candi_img])[0]
+            cands[group["car_id"][i]]["similarity"] = smlr
+            adjust_dis = self.adjust(dis, smlr)
+            cands[group["car_id"][i]]["adjust_dis"] = adjust_dis
+            if adjust_dis < min_dis:
+                select = group["car_id"][i]
+                min_dis = adjust_dis
+        return cands, select
 
     def concat(self, frame, break_list):
-        # 在第frame帧断了的id存在break_list中
+        """
+        frame: int
+        where the track broken
+        break_list: list
+        the break track id in this frame
+        (frame is the last point of track)
+        """
         self.breaks = dict()
         self._init_breaks(frame, break_list)
         for key in self.breaks:
@@ -95,15 +146,13 @@ class Trackconcat():
             self.breaks[key]["predict"] = output.tolist()
 
             # --- generate image feature ---
-            img_refer = cv2.imread(self.dir+"//%d.jpg"%key)
+            img_refer = cv2.imread(self.dir+"//%d.jpg" % key)
             self.siam.define_refer(img_refer)
 
             # --- generate candidate ---
-            candidates, select = self._candi(frame, output, self.breaks[key]["lane"])
+            candidates, select = self._candi(
+                frame, output, self.breaks[key]["lane"])
             self.breaks[key]["candidates"].update(candidates)
             self.breaks[key]["select"] = select
 
         return self.breaks
-
-
-
