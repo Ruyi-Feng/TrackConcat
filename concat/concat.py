@@ -75,9 +75,8 @@ class Trackconcat():
             self.breaks.update(
                 {id: {"lane": lane, "history": {}, "predict": [], "candidates": {}, "select": -1}})
             self.breaks["history"].update(tmp_dict)
-        self.breaks
 
-    def adjust(self, dis, smlr):
+    def _adjust(self, dis, smlr):
         return dis * (1 - smlr / self.r)
 
     def _candi(self, frame, output, lane):
@@ -121,7 +120,7 @@ class Trackconcat():
                                    group["car_id"][i])  # 此处可以考虑改成多候选一起
             smlr = self.siam.compare_candidates([candi_img])[0]
             cands[group["car_id"][i]]["similarity"] = smlr
-            adjust_dis = self.adjust(dis, smlr)
+            adjust_dis = self._adjust(dis, smlr)
             cands[group["car_id"][i]]["adjust_dis"] = adjust_dis
             if adjust_dis < min_dis:
                 select = group["car_id"][i]
