@@ -4,16 +4,27 @@ This project aims for broken trajectory concatenation through a joint model of N
 
 
 ## Framework
-1. time-space
-- input： broken trajectories，调用predict（Transformer）
+1. time-space（NS-Transformer）
+- input： broken trajectories，call predict
 - output：possible range
-2. image feature
-- input：range中interference candidate image (VGG16)
+2. image feature (Siamese-VGG16)
+- input：interference candidate image in possible range
 - output：similarity
 3. fusion
-- input：1. range中所有candidate的distance  2. similarity
+- input：1. All candidate distance  2. Similarity
 - output：target
 
+
+## Overall guaidance
+### Input
+- raw trajectory csv file path
+- cooresponding image screenshot named by car_id
+- some setting parameters
+```
+# args, params, dir, flnm
+```
+### Output
+- refreashed csv with trajetcories matched and gap completed
 
 ## Paper
 ### A Joint Spatiotemporal Prediction and Image Confirmation Model for Vehicle Trajectory Concatenation  with Low Detection Rates
