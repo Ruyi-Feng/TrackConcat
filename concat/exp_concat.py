@@ -4,7 +4,7 @@
 3. prepare img of each obj and named of car_id.jpg
 """
 from concat.concat import Trackconcat
-from complete import Completion
+from concat.complete import Completion
 import pandas as pd
 
 
@@ -26,17 +26,21 @@ class Exp_concat():
         contain break_list in all frames, no break frame is []
         """
         data = pd.read_csv(self.flnm)
-        data = data.sort_values(by=["frames", ]).reset_index(drop=True)
-        last_idset = {}
+        data = data.sort_values(by=["frame"]).reset_index(drop=True)
+        last_idset = set()
+        last_group = pd.DataFrame()
         break_list = []
         for frame, group in data.groupby(data["frame"]):
+            while len(break_list) < frame-1:
+                break_list.append([])
             idset = set(group["car_id"].tolist())
-            gone = idset - last_idset
+            gone = last_idset - idset
             breaks = []
             for k in gone:
-                if group.iloc[group["car_id"] == k]["longitude"] < self.bound:
+                if last_group.loc[last_group["car_id"] == k]["longitude"].values < self.bound:
                     breaks.append(k)
             last_idset = idset
+            last_group = group
             break_list.append(breaks)
         return break_list
 
@@ -49,7 +53,7 @@ class Exp_concat():
 
     def _fill_gap(self):
         data = pd.read_csv(self.flnm)
-        data = self.clp(data)
+        data = self.clp.run(data)
         data.to_csv(self.flnm, index=None)
 
     def run(self):

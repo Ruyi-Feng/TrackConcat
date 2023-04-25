@@ -49,7 +49,7 @@ class Trackconcat():
         self.nstrans = Exp_Test(args)
         self.dir = dir
         self.flnm = dir + "\\" + flnm
-        self.seq_len = args.seq_len
+        self.seq_len = args.seq_len + 20
         self.label = args.label
         self.dis_th = dis_th
         self.r = r
@@ -63,18 +63,18 @@ class Trackconcat():
         data = pd.read_csv(self.flnm)
         data = data.sort_values(by=["frame"], ascending=True)
         data = data.reset_index(drop=True)
-        pre = data.iloc[(data["frame"] <= frame) & (
+        pre = data.loc[(data["frame"] <= frame) & (
             data["frame"] >= frame - self.seq_len)]
-        self.post = data.iloc[(data["frame"] > frame) & (
+        self.post = data.loc[(data["frame"] > frame) & (
             data["frame"] <= frame + self.seq_len)]
         for id in break_list:
-            tmp = pre.iloc[pre["car_id"] == id]
-            lane = tmp["lane"][-1]
+            tmp = pre.loc[pre["car_id"] == id]
+            lane = tmp["lane"].tail()
             tmp = tmp[self.label_dict[self.label]]
             tmp_dict = copy.deepcopy(tmp.to_dict(orient='list'))
             self.breaks.update(
                 {id: {"lane": lane, "history": {}, "predict": [], "candidates": {}, "select": -1}})
-            self.breaks["history"].update(tmp_dict)
+            self.breaks[id]["history"].update(tmp_dict)
 
     def _adjust(self, dis, smlr):
         return dis * (1 - smlr / self.r)
@@ -127,6 +127,9 @@ class Trackconcat():
                 min_dis = adjust_dis
         return cands, select
 
+    def _less_than(self, key):
+        self.breaks[key]["select"] = key
+
     def concat(self, frame, break_list):
         """
         frame: int
@@ -140,6 +143,9 @@ class Trackconcat():
         for key in self.breaks:
             # --- generate prediction ---
             input = pd.DataFrame(self.breaks[key]["history"])
+            if len(input) < self.seq_len:
+                self._less_than(key)
+                continue
             output = self.nstrans.test(input)
             torch.cuda.empty_cache()
             self.breaks[key]["predict"] = output.tolist()

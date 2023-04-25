@@ -13,7 +13,7 @@ class Completion:
         self.ref = if_ref
 
     def _fit(self, track, head, end):
-        dur = []
+        dur = pd.DataFrame(columns=track.columns)
         if end < 3:
             # 使用end的全部点
             pre = track.iloc[0: end]
@@ -29,7 +29,7 @@ class Completion:
                 rest = c - head
                 break
         post = track.iloc[head: head+rest]
-        time = np.arange(pre["frame"][-1]+1, post["frame"][0])
+        time = np.arange(pre["frame"].iloc[-1]+1, post["frame"].iloc[0])
         t, cx, cy = [], [], []
         t = pre["frame"].tolist() + dur["frame"].tolist() + post["frame"].tolist()
         cx = pre["longitude"].tolist() + dur["longitude"].tolist() + post["longitude"].tolist()
@@ -55,11 +55,11 @@ class Completion:
         fragment["frame"] = time
         fragment["longitude"] = x
         fragment["latitude"] = y
-        fragment["width"] = np.mean([pre["width"][-1], post["width"][0]])
-        fragment["height"] = np.mean([pre["height"][-1][5], post["height"][0]])
+        fragment["width"] = np.mean([pre["width"].iloc[-1], post["width"].iloc[0]])
+        fragment["length"] = np.mean([pre["length"].iloc[-1], post["length"].iloc[0]])
         fragment["if_fill"] = 10
         col = set(track.columns)
-        extra = col - {"frame", "longitude", "latitude", "width", "height", "if_fill"}
+        extra = col - {"frame", "longitude", "latitude", "width", "length", "if_fill"}
         for label in extra:
             fragment[label] = track[label][end]
         return fragment
@@ -68,7 +68,7 @@ class Completion:
         # filling=polyfit，则使用三次插值计算（至少4个点）
         # 一共4-6个点，断裂点前至少1个，断后+断前至少4个。
         # 控制fit后的第一阶段系数，[-3, 3]
-        new_group = []  # new_group 中总是连续更新到最新一时刻的
+        new_group = pd.DataFrame()  # new_group 中总是连续更新到最新一时刻的
         end = -1
         for i in range(len(track)):
             if track["if_fill"][i] == -1:
@@ -78,8 +78,8 @@ class Completion:
                 if end == -1:
                     continue
                 frag = self._fit(track, head, end)
-                new_group += frag
-            new_group.append(track[i])
+                new_group = new_group.append(frag)
+            new_group = new_group.append(track.iloc[i])
         return new_group
 
     def _check_fragments(self, track):
