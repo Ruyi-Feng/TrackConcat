@@ -49,7 +49,7 @@ class Trackconcat():
         self.nstrans = Exp_Test(args)
         self.dir = dir
         self.flnm = dir + "\\" + flnm
-        self.seq_len = args.seq_len + 20
+        self.seq_len = args.seq_len
         self.label = args.label
         self.dis_th = dis_th
         self.r = r
@@ -64,12 +64,12 @@ class Trackconcat():
         data = data.sort_values(by=["frame"], ascending=True)
         data = data.reset_index(drop=True)
         pre = data.loc[(data["frame"] <= frame) & (
-            data["frame"] >= frame - self.seq_len)]
+            data["frame"] >= frame - self.seq_len - 20)]
         self.post = data.loc[(data["frame"] > frame) & (
             data["frame"] <= frame + self.seq_len)]
         for id in break_list:
             tmp = pre.loc[pre["car_id"] == id]
-            lane = tmp["lane"].tail()
+            lane = tmp["lane"].values[-1]
             tmp = tmp[self.label_dict[self.label]]
             tmp_dict = copy.deepcopy(tmp.to_dict(orient='list'))
             self.breaks.update(
@@ -103,9 +103,11 @@ class Trackconcat():
         """
         cands = dict()
         min_dis = self.dis_th
-        group = self.post.iloc[self.post.iloc["lane"] == lane]
+        group = self.post.loc[self.post["lane"] == lane]
         group = group.reset_index(drop=True)
         for i in range(len(group)):
+            if group["frame"][i] - frame >= self.seq_len:
+                continue
             refer_long = output[group["frame"][i] - frame]
             dis = abs(group["longitude"][i] - refer_long)
             if dis > self.dis_th:
@@ -115,8 +117,8 @@ class Trackconcat():
                               "similarity": 0,
                               "adjust_dis": self.dis_th})
             cands[group["car_id"][i]]["distance"] = min(
-                dis, cands[group["car_id"][i]])
-            candi_img = cv2.imread(dir+"\\%d.jpg" %
+                dis, cands[group["car_id"][i]]["distance"])
+            candi_img = cv2.imread(self.dir+"\\%d.jpg" %
                                    group["car_id"][i])  # 此处可以考虑改成多候选一起
             smlr = self.siam.compare_candidates([candi_img])[0]
             cands[group["car_id"][i]]["similarity"] = smlr
@@ -145,6 +147,7 @@ class Trackconcat():
             input = pd.DataFrame(self.breaks[key]["history"])
             if len(input) < self.seq_len:
                 self._less_than(key)
+                print("# not meet seq lenth key: ", key)
                 continue
             output = self.nstrans.test(input)
             torch.cuda.empty_cache()
@@ -159,5 +162,9 @@ class Trackconcat():
                 frame, output, self.breaks[key]["lane"])
             self.breaks[key]["candidates"].update(candidates)
             self.breaks[key]["select"] = select
+            print("---------------")
+            print("break id", key)
+            print("select id", select)
+            print("select info:", self.breaks[key]["candidates"][select])
 
         return self.breaks

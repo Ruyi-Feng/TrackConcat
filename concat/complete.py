@@ -86,7 +86,6 @@ class Completion:
         # 给轨迹长段头标1尾标-1，删除短的。
         h_idx, h_frm = 0, 0
         first = True
-        new_track = pd.DataFrame()
         track["if_fill"] = 0
         for index, row in track.iterrows():
             if first:
@@ -102,10 +101,6 @@ class Completion:
                 # 轨迹断裂了/轨迹段出现， 标记尾部/加入参考点
                 if idx_len >= 3:
                     track["if_fill"][n_idx - 1] = -1
-                    new_track = pd.concat([new_track, track.iloc[h_idx: n_idx, :]])
-                else:
-                    if self.ref:
-                        new_track = pd.concat([new_track, track.iloc[h_idx: n_idx, :]])
                 # 标记合理段的头部
                 if n_idx < len(track)-2:
                     if track["frame"][n_idx+2] - track["frame"][n_idx] == 2:
@@ -115,7 +110,7 @@ class Completion:
                 h_frm = n_frm
                 h_idx = n_idx
         # new_track = pd.DataFrame(new_track)
-        return new_track.reset_index(drop=True)
+        return track.reset_index(drop=True)
 
     def run(self, data):
         # data: [frame_id, car_id, left, top, w, h, conf, lane, gt_id]
@@ -140,6 +135,7 @@ class Completion:
         intered_tracks = intered_tracks.sort_values(
             by=["car_id", "frame"], ascending=[True, True])
         intered_tracks = intered_tracks.reset_index(drop=True)
+        intered_tracks["car_id"] = intered_tracks["car_id"].astype('int64')
         return intered_tracks
 
 

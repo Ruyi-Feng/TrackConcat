@@ -66,6 +66,7 @@ class Exp_concat():
             if len(break_lists[i]) == 0:
                 continue
             match = self.Tc.concat(i, break_lists[i])
+            print("match:", match)
             self._refreash(match)
         # 对ID已经match但有缺口的补全
         self._fill_gap()
