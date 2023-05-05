@@ -1,6 +1,7 @@
 import copy
 import cv2
 from nstransformer.model.exp_test import Exp_Test
+import numpy as np
 import pandas as pd
 from siamvgg.model.exp_siam import Exp_Siam
 import torch
@@ -129,8 +130,27 @@ class Trackconcat():
                 min_dis = adjust_dis
         return cands, select
 
-    def _less_than(self, key):
-        self.breaks[key]["select"] = key
+    def _extend(self, input):
+        new_input = pd.DataFrame()
+        last_date = input["date"].max()
+        date_seq = np.arange(last_date - self.seq_len, last_date, 1)
+        dates, longitudes = input["date"], input["longitude"]
+        slope, intercept = np.polyfit(dates, longitudes, 1)
+        longitudes = date_seq * slope + intercept
+        other_cols = set(input.columns) - set(["date", "longitude"])
+        for col in other_cols:
+            pre = np.random.normal(input[col].mean(), input[col].std(), self.seq_len - len(input))
+            new_input[col] = np.append(pre, input[col])
+        new_input["date"] = date_seq
+        new_input["longitude"] = longitudes
+        return new_input
+
+    def _extend_input(self, input, key):
+        if len(input) < 0.2 * self.seq_len:
+            self.breaks[key]["select"] = key
+            return True, None
+        input = self._extend(input)
+        return False, input
 
     def concat(self, frame, break_list):
         """
@@ -146,9 +166,10 @@ class Trackconcat():
             # --- generate prediction ---
             input = pd.DataFrame(self.breaks[key]["history"])
             if len(input) < self.seq_len:
-                self._less_than(key)
-                print("# not meet seq lenth key: ", key)
-                continue
+                frag, input = self._extend_input(input, key)
+                if frag:
+                    print("# not meet seq lenth key: ", key)
+                    continue
             output = self.nstrans.test(input)
             torch.cuda.empty_cache()
             self.breaks[key]["predict"] = output.tolist()
@@ -165,6 +186,6 @@ class Trackconcat():
             print("---------------")
             print("break id", key)
             print("select id", select)
-            print("select info:", self.breaks[key]["candidates"][select])
+            # print("select info:", self.breaks[key]["candidates"][select])
 
         return self.breaks

@@ -29,19 +29,23 @@ class Exp_concat():
         data = data.sort_values(by=["frame"]).reset_index(drop=True)
         last_idset = set()
         last_group = pd.DataFrame()
-        break_list = []
+        break_list = [[]]
         for frame, group in data.groupby(data["frame"]):
-            while len(break_list) < frame-1:
+            while len(break_list) < frame:
                 break_list.append([])
             idset = set(group["car_id"].tolist())
+            print("idset:", idset)
+            print("last_idset:", last_idset)
             gone = last_idset - idset
+            print("gone:", gone)
             breaks = []
             for k in gone:
                 if last_group.loc[last_group["car_id"] == k]["longitude"].values < self.bound:
                     breaks.append(k)
+                    break_list[frame-1].append(k)
+            print("break_list[frame-1]", break_list[frame-1])
             last_idset = idset
             last_group = group
-            break_list.append(breaks)
         return break_list
 
     def _refreash(self, match):
@@ -62,11 +66,12 @@ class Exp_concat():
         -----
         """
         break_lists = self._gener_breaklist()
-        for i in range(len(break_lists)):
+        for i in range(len(break_lists) - 1):
             if len(break_lists[i]) == 0:
                 continue
+            print(i, break_lists[i])
             match = self.Tc.concat(i, break_lists[i])
-            print("match:", match)
+            # print("match:", match)
             self._refreash(match)
         # 对ID已经match但有缺口的补全
         self._fill_gap()
