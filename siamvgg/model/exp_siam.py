@@ -76,6 +76,9 @@ class Exp_Siam(object):
     def compare_candidates(self, candi_s: list) -> list:
         similar = []
         for candi in candi_s:
+            if candi is None:
+                similar.append(torch.nn.Sigmoid()(0))
+                continue
             tmp_img = self._img_process(candi)
             simi = self.net([self.refer_img, tmp_img])[0]
             similar.append(torch.nn.Sigmoid()(simi))

@@ -74,7 +74,10 @@ def drf(gt_flnm, outflnm, drf_rate, interval=10):
     del_num = int(len(data) * (1 - drf_rate) / interval)
     data = rand_del(data, del_num, interval)
     data = reset_id(data)
-    return data
+    data["frame"] = data["frame"].astype('int')
+    data["car_id"] = data["car_id"].astype('int')
+    data["gt_id"] = data["gt_id"].astype('int')
+    data.to_csv(outflnm, index=False)
 
 
 if __name__ == '__main__':
@@ -82,4 +85,3 @@ if __name__ == '__main__':
     drf_rate = 0.6
     outflnm = "data/img/RML7/drf%.2f.csv"%drf_rate
     data = drf(gt_flnm, outflnm, drf_rate)
-    data.to_csv(outflnm, index=False)

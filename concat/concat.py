@@ -71,10 +71,11 @@ class Trackconcat():
         for id in break_list:
             tmp = pre.loc[pre["car_id"] == id]
             lane = tmp["lane"].values[-1]
+            img_id = tmp["gt_id"].values[-1]
             tmp = tmp[self.label_dict[self.label]]
             tmp_dict = copy.deepcopy(tmp.to_dict(orient='list'))
             self.breaks.update(
-                {id: {"lane": lane, "history": {}, "predict": [], "candidates": {}, "select": -1}})
+                {id: {"lane": lane, "history": {}, "predict": [], "candidates": {}, "select": -1, "img_id": img_id}})
             self.breaks[id]["history"].update(tmp_dict)
 
     def _adjust(self, dis, smlr):
@@ -103,6 +104,7 @@ class Trackconcat():
         the candidates key with the shortest adjust_dis
         """
         cands = dict()
+        select = -1
         min_dis = self.dis_th
         group = self.post.loc[self.post["lane"] == lane]
         group = group.reset_index(drop=True)
@@ -120,7 +122,8 @@ class Trackconcat():
             cands[group["car_id"][i]]["distance"] = min(
                 dis, cands[group["car_id"][i]]["distance"])
             candi_img = cv2.imread(self.dir+"\\%d.jpg" %
-                                   group["car_id"][i])  # 此处可以考虑改成多候选一起
+                                   group["gt_id"][i])  # 此处存疑2
+            # 1. 可以考虑改成多候选一起, 2. gt_id 无真值测试时应是car_id,但是和图片对不上
             smlr = self.siam.compare_candidates([candi_img])[0]
             cands[group["car_id"][i]]["similarity"] = smlr
             adjust_dis = self._adjust(dis, smlr)
@@ -175,14 +178,14 @@ class Trackconcat():
             self.breaks[key]["predict"] = output.tolist()
 
             # --- generate image feature ---
-            img_refer = cv2.imread(self.dir+"//%d.jpg" % key)
+            img_refer = cv2.imread(self.dir+"//%d.jpg" % self.breaks[key]["img_id"])
             self.siam.define_refer(img_refer)
 
             # --- generate candidate ---
             candidates, select = self._candi(
                 frame, output, self.breaks[key]["lane"])
             self.breaks[key]["candidates"].update(candidates)
-            self.breaks[key]["select"] = select
+            self.breaks[key]["select"] = select if select > 0 else key
             print("---------------")
             print("break id", key)
             print("select id", select)
