@@ -81,7 +81,7 @@ class Dataset_Pred(Dataset):
                 lambda row: row.weekday(), 1)
             df_stamp['hour'] = df_stamp.date.apply(lambda row: row.hour, 1)
             df_stamp['minute'] = df_stamp.date.apply(lambda row: row.minute, 1)
-            df_stamp['minute'] = df_stamp.minute.map(lambda x: x // 15)
+            df_stamp['minute'] = df_stamp.minute.map(lambda x: x)  # // 15
             # print(df_stamp.columns)
             data_stamp = df_stamp.drop(['date'], axis=1).values
         elif self.timeenc == 1:

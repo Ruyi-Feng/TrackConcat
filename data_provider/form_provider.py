@@ -63,21 +63,21 @@ def devide_lane(packed, train_setting):
 if __name__ == '__main__':
     flnm = ".\\data\\img\\track_raw.csv"
     outflnm = ".\\data\\img\\RML7\\"
-    batch = 144
+    batch = 192
     min_date = 0  # 790560
     ### 1
-    packed = add_headway(flnm)
-    # packed.to_csv(outflnm+"packed-rml7.csv", index=None, mode='a', header=None)
+    # packed = add_headway(flnm)
+    # packed.to_csv(outflnm+"packed-rml7.csv", index=None, mode='a')
     print("finish pack!")
     ### 2 筛选车道和分出不同的参数
-    # packed = pd.read_csv(outflnm + "packed-rml7.csv")
+    packed = pd.read_csv(outflnm + "packed-rml7.csv")
     train_setting = {"train": [2, 3, 4], "test": [1]}  # RML7
     # train_setting = {"train": [2, 3, 7, 8, 9], "test": [6, 7]}  # KZM6
 
     train, test = devide_lane(packed, train_setting)
     test.to_csv(outflnm+"packed.csv", index=None)
-    # train = batch_code(train, batch, min_date)
-    # test = batch_code(test, batch, min_date)
+    train = batch_code(train, batch, min_date)
+    test = batch_code(test, batch, min_date)
 
     # files = {"HeadwaySpeed": ["date", "headway", "speed", "longitude"],
     #          "HeadwaySpeedAcc": ["date", "headway", "speed", "acceleration", "longitude"],
@@ -90,3 +90,8 @@ if __name__ == '__main__':
     #          "withTTC": ["date", "ttc", "longitude"],}
     # devide_files(train, files, outflnm, "train")
     # devide_files(test, files, outflnm, "test")
+
+    files = {"LeaderPosSpeed": ["date", "leaderpos", "speed", "longitude"],
+            "LeaderPosSpeedAcc": ["date", "leaderpos", "speed", "acceleration", "longitude"],}
+    devide_files(train, files, outflnm, "train")
+    devide_files(test, files, outflnm, "test")
