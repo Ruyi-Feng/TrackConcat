@@ -15,7 +15,7 @@ def param(label, features, target, var_num):
     parser.add_argument('--features', type=str, default=features,
                         help='forecasting task, options:[M, S, MS]; M:multivariate predict multivariate, S:univariate predict univariate, MS:multivariate predict univariate')
     parser.add_argument('--target', type=str, default=target, help='target feature in S or MS task')
-    parser.add_argument('--freq', type=str, default='t',
+    parser.add_argument('--freq', type=str, default='15min',
                         help='freq for time features encoding, options:[s:secondly, t:minutely, h:hourly, d:daily, b:business days, w:weekly, m:monthly], you can also use more detailed freq like 15min or 3h')
     parser.add_argument('--checkpoints', type=str, default='./checkpoints/', help='location of model checkpoints')
 

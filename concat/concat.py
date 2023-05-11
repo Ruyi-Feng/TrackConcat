@@ -35,15 +35,18 @@ class Trackconcat():
     nstransformer去predict，提取obj
     找candidate， generate
     """
-    label_dict = {"HeadwaySpeed": ["date", "headway", "speed", "longitude"],
-                  "HeadwaySpeedAcc": ["date", "headway", "speed", "acceleration", "longitude"],
-                  "TTCSpeed": ["date", "ttc", "speed", "longitude"],
-                  "TTCSpeedAcc": ["date", "ttc", "speed", "acceleration", "longitude"],
-                  "withAcc": ["date", "acceleration", "longitude"],
+    label_dict = {"HeadwaySpeed": ["date", "headway", "speed", "longitude", "distance"],
+                  "HeadwaySpeedAcc": ["date", "headway", "speed", "acceleration", "longitude", "distance"],
+                  "TTCSpeed": ["date", "ttc", "speed", "longitude", "distance"],
+                  "TTCSpeedAcc": ["date", "ttc", "speed", "acceleration", "longitude", "distance"],
+                  "withAcc": ["date", "acceleration", "longitude", "distance"],
                   "withHeadway": ["date", "headway", "longitude"],
-                  "withLeaderPos": ["date", "leaderpos", "longitude"],
-                  "withSpeed": ["date", "speed", "longitude"],
-                  "withTTC": ["date", "ttc", "longitude"], }
+                  "withLeaderPos": ["date", "leaderpos", "longitude", "distance"],
+                  "withSpeed": ["date", "speed", "longitude", "distance"],
+                  "withTTC": ["date", "ttc", "longitude", "distance"],
+                  "LeaderPosSpeed": ["date", "leaderpos", "speed", "longitude", "distance"],
+                  "LeaderPosSpeedAcc": ["date", "leaderpos", "speed", "acceleration", "longitude", "distance"],}
+
 
     def __init__(self, args, params, dir, flnm, dis_th=5, r=2.0):
         self.siam = Exp_Siam(params)
@@ -69,9 +72,11 @@ class Trackconcat():
         self.post = data.loc[(data["frame"] > frame) & (
             data["frame"] <= frame + self.seq_len)]
         for id in break_list:
-            tmp = pre.loc[pre["car_id"] == id]
+            tmp = pre.loc[pre["car_id"] == id][-self.seq_len:]
             lane = tmp["lane"].values[-1]
             img_id = tmp["gt_id"].values[-1]
+            tmp["date"] = np.arange(0, self.seq_len)
+            tmp["distance"] = tmp["longitude"].values - tmp["longitude"].values[0]
             tmp = tmp[self.label_dict[self.label]]
             tmp_dict = copy.deepcopy(tmp.to_dict(orient='list'))
             self.breaks.update(
@@ -173,7 +178,7 @@ class Trackconcat():
                 if frag:
                     print("# not meet seq lenth key: ", key)
                     continue
-            output = self.nstrans.test(input)
+            output = self.nstrans.test(input) + input["longitude"].values[0]
             torch.cuda.empty_cache()
             self.breaks[key]["predict"] = output.tolist()
 
