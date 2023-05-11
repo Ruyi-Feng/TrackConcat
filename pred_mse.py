@@ -187,8 +187,8 @@ if __name__ == '__main__':
               "LeaderPosSpeed": 3}
 
     # generate evaluation
-    # for label in labels:
-    #     evaluate_nstransformer(label, labels[label])
+    for label in labels:
+        evaluate_nstransformer(label, labels[label])
 
     # create figure
     # labels = {"HeadwaySpeed": 3,
@@ -200,5 +200,6 @@ if __name__ == '__main__':
     #          "withTTC": 2}
 
     # subplot_a(labels, 89)
-    flnm = ".//data//img//total_error.csv"
-    subplot_b_csv(flnm, labels)
+    # flnm = ".//data//img//total_error.csv"
+    # subplot_b_csv(flnm, labels)
+    subplot_b(labels)
