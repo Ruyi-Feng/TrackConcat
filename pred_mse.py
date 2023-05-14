@@ -73,7 +73,7 @@ def total_error(label, variable):
     errs_p = np.zeros(args.seq_len)
     errs_m = np.zeros(args.seq_len)
 
-    for i in range(len(data) // (2*args.seq_len)):
+    for i in range(0, len(data) // (2*args.seq_len), 100):
         # print(i)
         input = data.iloc[2 * i * args.seq_len: (2 * i + 1) * args.seq_len]
         true_value = data.iloc[(2 * i + 1) * args.seq_len: (2 * i + 2) * args.seq_len]
@@ -135,8 +135,8 @@ def subplot_b(labels):
     num = len(labels)
     saves = dict()
     plt.figure()
-    order = ["withTTC", "withSpeed", "TTCSpeedAcc", "TTCSpeed", "withLeaderPos", "LeaderPosSpeed","LeaderPosSpeedAcc", "HeadwaySpeedAcc","HeadwaySpeed" ]
-    # order = ["LeaderPosSpeedAcc"]
+    # order = ["withTTC", "withSpeed", "TTCSpeedAcc", "TTCSpeed", "withLeaderPos", "LeaderPosSpeed","LeaderPosSpeedAcc", "HeadwaySpeedAcc","HeadwaySpeed" ]
+    order = ["HeadwaySpeed","HeadwaySpeedAcc", "LeaderPosSpeedAcc", "LeaderPosSpeed"]
     for label in order:
         p, m = total_error(label, labels[label])
         saves.update({label+"P": p, label+"M": m})
@@ -148,9 +148,9 @@ def subplot_b(labels):
     plt.plot([0, len(p)], [-3, -3], c="black", linestyle="--", linewidth=0.5)
     plt.legend(loc="upper left")
     plt.savefig("./data/img/total_error.png")
-    # plt.show()
-    saves = pd.DataFrame(saves)
-    saves.to_csv("./data/img/total_error.csv")
+    plt.show()
+    # saves = pd.DataFrame(saves)
+    # saves.to_csv("./data/img/total_error.csv")
 
 def subplot_b_csv(flnm, labels):
     data = pd.read_csv(flnm)
@@ -158,7 +158,7 @@ def subplot_b_csv(flnm, labels):
     saves = dict()
     plt.figure()
     order = ["TTCSpeedAcc", "withLeaderPos",  "HeadwaySpeed","HeadwaySpeedAcc", "LeaderPosSpeedAcc","TTCSpeed", "LeaderPosSpeed", ]  #  ,"withTTC","withSpeed", 
-    # order = ["LeaderPosSpeedAcc"]
+    # order = ["HeadwaySpeedAcc", "LeaderPosSpeedAcc", "HeadwaySpeed","LeaderPosSpeed"]
     num = len(order)
     for label in order:
         p, m = data[label+'P'].values, data[label+'M'].values
@@ -174,30 +174,30 @@ def subplot_b_csv(flnm, labels):
     plt.show()
 
 if __name__ == '__main__':
-    labels = {"LeaderPosSpeedAcc": 4,
-              "HeadwaySpeed": 3,
-              "HeadwaySpeedAcc": 4,
-              "TTCSpeed": 3,
-              "TTCSpeedAcc": 4,
-              "withAcc": 2,
-              "withHeadway": 2,
-              "withLeaderPos": 2,
-              "withSpeed": 2,
-              "withTTC": 2,
-              "LeaderPosSpeed": 3}
+    labels = {"LeaderPosSpeedAcc": 5,
+              "HeadwaySpeed": 4,
+              "HeadwaySpeedAcc": 5,
+              "TTCSpeed": 4,
+              "TTCSpeedAcc": 5,
+              "withAcc": 3,
+              "withHeadway": 3,
+              "withLeaderPos": 3,
+              "withSpeed": 3,
+              "withTTC": 3,
+              "LeaderPosSpeed": 4}
 
     # generate evaluation
     for label in labels:
         evaluate_nstransformer(label, labels[label])
 
     # create figure
-    # labels = {"HeadwaySpeed": 3,
-    #          "HeadwaySpeedAcc": 4,
-    #          "TTCSpeed": 3,
-    #          "TTCSpeedAcc": 4,
-    #          "withLeaderPos": 2,
-    #          "withSpeed": 2,
-    #          "withTTC": 2}
+    # labels = {"HeadwaySpeed": 4,
+    #          "HeadwaySpeedAcc": 5,
+    #          "TTCSpeed": 4,
+    #          "TTCSpeedAcc": 5,
+    #          "withLeaderPos": 3,
+    #          "withSpeed": 3,
+    #          "withTTC": 3}
 
     # subplot_a(labels, 89)
     # flnm = ".//data//img//total_error.csv"

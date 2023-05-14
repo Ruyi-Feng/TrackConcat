@@ -12,7 +12,7 @@ warnings.filterwarnings('ignore')
 class Dataset_Pred(Dataset):
     def __init__(self, flag='pred', size=None,
                  features='S',
-                 target='OT', scale=True, inverse=False,
+                 target='OT', scale=False, inverse=False,
                  timeenc=0, freq='15min', cols=None):
         # size [seq_len, label_len, pred_len]
         # info
@@ -97,7 +97,7 @@ class Dataset_Pred(Dataset):
         self.data_stamp = data_stamp
 
     def __getitem__(self, index):
-        s_begin = index
+        s_begin = index  # * (self.seq_len + self.pred_len)
         s_end = s_begin + self.seq_len
         r_begin = s_end - self.label_len
         r_end = r_begin + self.label_len + self.pred_len
@@ -113,7 +113,7 @@ class Dataset_Pred(Dataset):
         return seq_x, seq_y, seq_x_mark, seq_y_mark
 
     def __len__(self):
-        return len(self.data_x) - self.seq_len + 1
+        return len(self.data_x) // (self.seq_len)
 
     def inverse_transform(self, data):
         return self.scaler.inverse_transform(data)

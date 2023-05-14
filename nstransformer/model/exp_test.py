@@ -57,9 +57,24 @@ class Exp_Test(Exp_Basic):
         criterion = nn.MSELoss()
         return criterion
 
+    def _standardize(self, df):
+        self.sca_min, self.sca_max, self.mean, self.var = np.load("./weights/"+self.label+"/inverse.npy", allow_pickle=True)
+        col = df.columns
+        df[col[0]] = (df[col[0]] - self.sca_min[0]) / (self.sca_max[0] - self.sca_min[0])
+        for i in range(1, len(col)):
+            df[col[i]] = (df[col[i]] - self.sca_min[i]) / (self.sca_max[i] - self.sca_min[i])
+            df[col[i]] = (df[col[i]] - self.mean[i-1]) / self.var[i-1]
+        return df
+
+    def _de_standardize(self, pred):
+        pred = pred * self.var[-1] + self.mean[-1]
+        pred = pred * (self.sca_max[-1] - self.sca_min[-1]) + self.sca_min[-1]
+        return pred
+
+
     def test(self, df):
         # 实现的是一条一条的预测。返回预测值。
-        self.df = df  # 考虑如何组合，使得多条轨迹一起被load上来，一起推理
+        self.df = self._standardize(df)  # 考虑如何组合，使得多条轨迹一起被load上来，一起推理
         test_loader = self._get_data()
         preds = []
         self.model.eval()
@@ -97,9 +112,8 @@ class Exp_Test(Exp_Basic):
                 outputs = outputs[:, -self.args.pred_len:, :]
                 outputs = outputs.detach().cpu().numpy()
                 # outputs.detach().cpu().numpy()  # .squeeze()
-                pred = outputs.reshape(-1, self.args.enc_in)
-                pred = self.dataset_prd.inverse_transform(
-                    pred)[:, f_dim:].reshape(1, 96)
+                pred = outputs.reshape(-1, self.args.enc_in)[:, f_dim:].reshape(1, 96)
+                pred = self._de_standardize(pred)
                 preds.append(pred)
 
         preds = np.array(preds)
