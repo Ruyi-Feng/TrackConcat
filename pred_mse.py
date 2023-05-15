@@ -1,3 +1,4 @@
+import csv
 import matplotlib.pyplot as plt
 import matplotlib
 from nstransformer.model.exp_test import Exp_Test
@@ -9,6 +10,37 @@ import pandas as pd
 import torch
 matplotlib.use('Qt5Agg')
 
+def update(offset, label_len, n_p, errs_p, n_m, errs_m, mse_v2, mse_n, n, o_offset, h_offset, e_offset, m_offset):
+    for j in range(len(offset)):
+        if offset[j] > 0:
+            n_p[j] += 1
+            errs_p[j] += offset[j]
+        else:
+            n_m[j] += 1
+            errs_m[j] += offset[j]
+
+    mse_v2 += np.sum(np.square(offset))
+    mse_n += len(offset)
+    n += 1
+    o_offset += np.abs(offset[0])
+    h_offset += np.abs(offset[label_len])
+    e_offset += np.abs(offset[-1])
+    m_offset += np.max(np.abs(offset))
+    return mse_v2, mse_n, n, o_offset, h_offset, e_offset, m_offset
+
+def predict(exp, data, seq_len, dir, i):
+    input = data.loc[data["date"] < seq_len]
+    true_value = data.loc[(data["date"] >= seq_len) & (data["date"] < 2 * seq_len)]
+    true_value = true_value[true_value.columns[-1]].values
+    input = input.reset_index(drop=True)
+
+    output = exp.test(input)
+    torch.cuda.empty_cache()
+    offset = true_value - output
+    if i % 200 == 0:
+        visual(true_value, output, name=dir+"//fig//%d.jpg"%i)
+    return offset
+
 def evaluate_nstransformer(label, variable):
     # root_path, data_path, features, target, var_num
     dir = "./data/EXP/"+label+"/"
@@ -16,38 +48,39 @@ def evaluate_nstransformer(label, variable):
     if not os.path.exists(fig_dir):
         os.makedirs(fig_dir)
     args = param(label, "MS", "", variable)
-    # print('Args in experiment:')
-    # print(args)
+
+    mse_n, n, mse_v2 = 0, 0, 0
+    # 起始偏移 中部偏移 末端偏移 最大偏移
+    o_offset, h_offset, e_offset, m_offset = 0, 0, 0, 0
+    n_p, n_m = np.zeros(args.seq_len), np.zeros(args.seq_len)
+    errs_p, errs_m = np.zeros(args.seq_len), np.zeros(args.seq_len)
 
     Exp = Exp_Test
     exp = Exp(args)  # set experiments
-    data = pd.read_csv(dir+"test.csv")
-    mse_n = 0
-    n = 0
-    mse_v2 = 0
-    o_offset = 0  # 起始偏移
-    h_offset = 0  # 中部偏移
-    e_offset = 0  # 末端偏移
-    m_offset = 0  # 最大偏移
-    for i in range(len(data) // (2*args.seq_len)):
-        # print(i)
-        input = data.iloc[2 * i * args.seq_len: (2 * i + 1) * args.seq_len]
-        true_value = data.iloc[(2 * i + 1) * args.seq_len: (2 * i + 2) * args.seq_len]
-        true_value = true_value[true_value.columns[-1]].values
-        if input[input.columns[-1]].values[0] > 140:
-            continue
-        input = input.reset_index(drop=True)
-        output = exp.test(input)
-        torch.cuda.empty_cache()
-        offset = true_value - output
-        mse_v2 += np.sum(np.square(offset))
-        mse_n += len(offset)
-        n += 1
-        o_offset += np.abs(offset[0])
-        h_offset += np.abs(offset[args.label_len])
-        e_offset += np.abs(offset[-1])
-        m_offset += np.max(np.abs(offset))
-        visual(true_value, output, name=dir+"//fig//%d.jpg"%i)
+
+    with open(dir+"test.csv",'r') as csv_file:
+        csv_reader = csv.reader(csv_file)
+        input = []
+        read_col = False
+        i = 0
+        for line in csv_reader:
+            if not read_col:
+                cols = line
+                read_col = True
+                continue
+            if float(line[0]) == 0:
+                i += 1
+                data = pd.DataFrame(input, columns=cols).astype(float)
+                input = []
+                if len(data) < 2 * args.seq_len or data[cols[-1]].values[0] > 140:
+                    input.append(line)
+                    continue
+                offset = predict(exp, data, args.seq_len, dir, i)
+                mse_v2, mse_n, n, o_offset, h_offset, e_offset, m_offset = update(offset, args.label_len, n_p, errs_p, n_m, errs_m, mse_v2, mse_n, n, o_offset, h_offset, e_offset, m_offset)
+            input.append(line)
+
+    errs_p = np.nan_to_num(errs_p / n_p)
+    errs_m = np.nan_to_num(errs_m / n_m)
     mse = mse_v2 / mse_n
     o_offset = o_offset / n
     h_offset = h_offset / n
@@ -57,43 +90,8 @@ def evaluate_nstransformer(label, variable):
     print(label)
     print("mse_v2", mse_v2, "n", n)
     print("mse: %.4f, o_offset: %.4f, h_offset: %.4f, e_offset: %.4f, m_offset: %.4f"%(mse, o_offset, h_offset, e_offset, m_offset))
-
-
-def total_error(label, variable):
-    dir = "./data/EXP/"+label+"/"
-    fig_dir = dir + "fig/"
-    if not os.path.exists(fig_dir):
-        os.makedirs(fig_dir)
-    args = param(label, "MS", "", variable)
-    n_p = np.zeros(args.seq_len)
-    n_m = np.zeros(args.seq_len)
-    Exp = Exp_Test
-    exp = Exp(args)  # set experiments
-    data = pd.read_csv(dir+"test.csv")
-    errs_p = np.zeros(args.seq_len)
-    errs_m = np.zeros(args.seq_len)
-
-    for i in range(0, len(data) // (2*args.seq_len), 100):
-        # print(i)
-        input = data.iloc[2 * i * args.seq_len: (2 * i + 1) * args.seq_len]
-        true_value = data.iloc[(2 * i + 1) * args.seq_len: (2 * i + 2) * args.seq_len]
-        true_value = true_value[true_value.columns[-1]].values
-        if input[input.columns[-1]].values[0] > 140:
-            continue
-        input = input.reset_index(drop=True)
-        output = exp.test(input)
-        torch.cuda.empty_cache()
-        offset = output - true_value
-        for j in range(len(offset)):
-            if offset[j] > 0:
-                n_p[j] += 1
-                errs_p[j] += offset[j]
-            else:
-                n_m[j] += 1
-                errs_m[j] += offset[j]
-    errs_p = np.nan_to_num(errs_p / n_p)
-    errs_m = np.nan_to_num(errs_m / n_m)
     return errs_p, errs_m
+
 
 def typical_predict(labels, i):
     lines = dict()
@@ -117,7 +115,6 @@ def typical_predict(labels, i):
         # predict
         output = exp.test(input)
         torch.cuda.empty_cache()
-        offset = true_value - output
         lines.update({label: output})
     return lines
 
@@ -130,35 +127,14 @@ def subplot_a(labels, i):
     plt.legend()
     plt.show()
 
-def subplot_b(labels):
-    i = 0
-    num = len(labels)
-    saves = dict()
-    plt.figure()
-    # order = ["withTTC", "withSpeed", "TTCSpeedAcc", "TTCSpeed", "withLeaderPos", "LeaderPosSpeed","LeaderPosSpeedAcc", "HeadwaySpeedAcc","HeadwaySpeed" ]
-    order = ["HeadwaySpeed","HeadwaySpeedAcc", "LeaderPosSpeedAcc", "LeaderPosSpeed"]
-    for label in order:
-        p, m = total_error(label, labels[label])
-        saves.update({label+"P": p, label+"M": m})
-        c = plt.cm.jet(i / num)
-        i += 1
-        plt.fill_between(np.arange(len(p)), p, m, alpha=(0.2+0.2*i/num), label=label, facecolor=c)
-    plt.plot([0, len(p)], [0, 0], c="black", linewidth=1)
-    plt.plot([0, len(p)], [3, 3], c="black", linestyle="--", linewidth=0.5)
-    plt.plot([0, len(p)], [-3, -3], c="black", linestyle="--", linewidth=0.5)
-    plt.legend(loc="upper left")
-    plt.savefig("./data/img/total_error.png")
-    plt.show()
-    # saves = pd.DataFrame(saves)
-    # saves.to_csv("./data/img/total_error.csv")
 
 def subplot_b_csv(flnm, labels):
     data = pd.read_csv(flnm)
     i = 0
     saves = dict()
     plt.figure()
-    order = ["TTCSpeedAcc", "withLeaderPos",  "HeadwaySpeed","HeadwaySpeedAcc", "LeaderPosSpeedAcc","TTCSpeed", "LeaderPosSpeed", ]  #  ,"withTTC","withSpeed", 
-    # order = ["HeadwaySpeedAcc", "LeaderPosSpeedAcc", "HeadwaySpeed","LeaderPosSpeed"]
+    # order = ["TTCSpeedAcc", "withLeaderPos",  "HeadwaySpeed","HeadwaySpeedAcc", "LeaderPosSpeedAcc","TTCSpeed", "LeaderPosSpeed", ]  #  ,"withTTC","withSpeed", 
+    order = ["HeadwaySpeed"]
     num = len(order)
     for label in order:
         p, m = data[label+'P'].values, data[label+'M'].values
@@ -174,21 +150,27 @@ def subplot_b_csv(flnm, labels):
     plt.show()
 
 if __name__ == '__main__':
-    labels = {"LeaderPosSpeedAcc": 5,
-              "HeadwaySpeed": 4,
-              "HeadwaySpeedAcc": 5,
-              "TTCSpeed": 4,
-              "TTCSpeedAcc": 5,
-              "withAcc": 3,
-              "withHeadway": 3,
-              "withLeaderPos": 3,
-              "withSpeed": 3,
-              "withTTC": 3,
-              "LeaderPosSpeed": 4}
+    # labels = {"LeaderPosSpeedAcc": 5,
+    #           "HeadwaySpeed": 4,
+    #           "HeadwaySpeedAcc": 5,
+    #           "TTCSpeed": 4,
+    #           "TTCSpeedAcc": 5,
+    #           "withAcc": 3,
+    #           "withHeadway": 3,
+    #           "withLeaderPos": 3,
+    #           "withSpeed": 3,
+    #           "withTTC": 3,
+    #           "LeaderPosSpeed": 4}
+    labels = {"HeadwaySpeed": 4}
 
     # generate evaluation
+    error_flnm = ".//data//img//total_error.csv"
+    saves = dict()
     for label in labels:
-        evaluate_nstransformer(label, labels[label])
+        p, m = evaluate_nstransformer(label, labels[label])
+        saves.update({label+"P": p, label+"M": m})
+    saves = pd.DataFrame(saves)
+    saves.to_csv(error_flnm)
 
     # create figure
     # labels = {"HeadwaySpeed": 4,
@@ -200,6 +182,4 @@ if __name__ == '__main__':
     #          "withTTC": 3}
 
     # subplot_a(labels, 89)
-    # flnm = ".//data//img//total_error.csv"
-    # subplot_b_csv(flnm, labels)
-    subplot_b(labels)
+    subplot_b_csv(error_flnm, labels)
