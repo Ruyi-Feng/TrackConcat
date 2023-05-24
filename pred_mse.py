@@ -133,8 +133,8 @@ def subplot_b_csv(flnm, labels):
     i = 0
     saves = dict()
     plt.figure()
-    # order = ["TTCSpeedAcc", "withLeaderPos",  "HeadwaySpeed","HeadwaySpeedAcc", "LeaderPosSpeedAcc","TTCSpeed", "LeaderPosSpeed", ]  #  ,"withTTC","withSpeed", 
-    order = ["HeadwaySpeed"]
+    order = ["HeadwaySpeedAcc", "LeaderPosSpeedAcc","TTCSpeedAcc", "TTCSpeed","withTTC", "LeaderPosSpeed", "withSpeed", "HeadwaySpeed", "withLeaderPos"] #, , # ,   ]  #  ,, 
+    # order = ["HeadwaySpeed"]
     num = len(order)
     for label in order:
         p, m = data[label+'P'].values, data[label+'M'].values
@@ -145,32 +145,33 @@ def subplot_b_csv(flnm, labels):
     plt.plot([0, len(p)], [3, 3], c="black", linestyle="--", linewidth=0.5)
     plt.plot([0, len(p)], [-3, -3], c="black", linestyle="--", linewidth=0.5)
     plt.legend(loc="lower left")
-    plt.xlim([0, 60])
+    # plt.xlim([0, 60])
     plt.savefig("./data/img/total_error.png")
     plt.show()
 
 if __name__ == '__main__':
-    # labels = {"LeaderPosSpeedAcc": 5,
-    #           "HeadwaySpeed": 4,
-    #           "HeadwaySpeedAcc": 5,
-    #           "TTCSpeed": 4,
-    #           "TTCSpeedAcc": 5,
-    #           "withAcc": 3,
-    #           "withHeadway": 3,
-    #           "withLeaderPos": 3,
-    #           "withSpeed": 3,
-    #           "withTTC": 3,
-    #           "LeaderPosSpeed": 4}
-    labels = {"HeadwaySpeed": 4}
+    labels = {"LeaderPosSpeedAcc": 5,
+              "HeadwaySpeed": 4,
+              "HeadwaySpeedAcc": 5,
+              "TTCSpeed": 4,
+              "onlyLong": 2,
+              "TTCSpeedAcc": 5,
+              "withAcc": 3,
+              "withHeadway": 3,
+              "withLeaderPos": 3,
+              "withSpeed": 3,
+              "withTTC": 3,
+              "LeaderPosSpeed": 4}
+    # labels = {"HeadwaySpeed": 4}
 
     # generate evaluation
     error_flnm = ".//data//img//total_error.csv"
-    saves = dict()
-    for label in labels:
-        p, m = evaluate_nstransformer(label, labels[label])
-        saves.update({label+"P": p, label+"M": m})
-    saves = pd.DataFrame(saves)
-    saves.to_csv(error_flnm)
+    # saves = dict()
+    # for label in labels:
+    #     p, m = evaluate_nstransformer(label, labels[label])
+    #     saves.update({label+"P": p, label+"M": m})
+    # saves = pd.DataFrame(saves)
+    # saves.to_csv(error_flnm)
 
     # create figure
     # labels = {"HeadwaySpeed": 4,
