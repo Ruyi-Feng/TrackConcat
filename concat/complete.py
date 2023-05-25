@@ -135,7 +135,7 @@ class Completion:
         intered_tracks = intered_tracks.sort_values(
             by=["car_id", "frame"], ascending=[True, True])
         intered_tracks = intered_tracks.reset_index(drop=True)
-        intered_tracks["car_id"] = intered_tracks["car_id"].astype('int64')
+        intered_tracks["car_id"] = intered_tracks["car_id"].astype('int')
         return intered_tracks
 
 

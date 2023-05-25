@@ -1,13 +1,3 @@
-"""
-读取gt csv 只需要保证轨迹是完整的即可
-对这些轨迹进行gt id的添加
-drf:
-    计算总数和折减率折减数
-    随机删去行
-    对当前id刷新（不动gt_id）
-
-
-"""
 import numpy as np
 import random
 import pandas as pd
@@ -44,7 +34,7 @@ def reset_id(data):
     return data
 
 
-def rand_del(data, del_num, interval):
+def rand_del(data, del_num, del_length, min_interval):
     """
     Deletes a specified number of rows from a pandas DataFrame at random with a specified interval.
 
@@ -59,29 +49,33 @@ def rand_del(data, del_num, interval):
     # Get the number of rows in the DataFrame
     num_rows = len(data)
     # Generate a list of indices to sample from with the specified interval
-    sample_indices = range(0, num_rows-interval, interval)
+    sample_indices = range(0, num_rows-del_length, min_interval)
     # Generate a list of random indices to delete from the sample indices
+    print("del_num", del_num)
     del_indices = random.sample(sample_indices, del_num)
     # Delete the rows with the random indices
     for i in del_indices:
-        seq = range(i, i + interval)
+        seq = range(i, i + del_length)
         data = data.drop(index=seq)
     return data
 
-def drf(gt_flnm, outflnm, drf_rate, interval=10):
+def drf(gt_flnm, outflnm, drf_rate, del_length=40, min_interval=96):
     data = pd.read_csv(gt_flnm)
     data["gt_id"] = data["car_id"]
-    del_num = int(len(data) * (1 - drf_rate) / interval)
-    data = rand_del(data, del_num, interval)
+    del_num = int(len(data) * (1 - drf_rate) / del_length)
+    data = rand_del(data, del_num, del_length, min_interval)
     data = reset_id(data)
     data["frame"] = data["frame"].astype('int')
     data["car_id"] = data["car_id"].astype('int')
     data["gt_id"] = data["gt_id"].astype('int')
     data.to_csv(outflnm, index=False)
+    data.to_csv("data/img/RML7/drf%.2f-ori.csv"%drf_rate, index=False)
 
 
 if __name__ == '__main__':
-    gt_flnm = "data/img/RML7/packed.csv"
-    drf_rate = 0.6
-    outflnm = "data/img/RML7/drf%.2f.csv"%drf_rate
-    data = drf(gt_flnm, outflnm, drf_rate)
+
+    for drf_rate in np.arange(0.6, 0.95, 0.05):
+        gt_flnm = "data/img/RML7/packed.csv"
+        outflnm = "data/img/RML7/drf%.2f.csv"%drf_rate
+        data = drf(gt_flnm, outflnm, drf_rate)
+

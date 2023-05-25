@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 class Evaluation:
 
@@ -35,10 +36,12 @@ class Evaluation:
 
 
 if __name__ == '__main__':
-    flnm = "data/img/RML7/drf0.60 - 副本.csv"
-    data = pd.read_csv(flnm)
-    rml7 = Evaluation(data, 147844)
-    print("mota", rml7.mota)
-    print("idsw", rml7.idsw)
-    print("recall", rml7.recall)
-    print("f1_score", rml7.f1_score)
+    for rate in np.arange(0.7, 0.9, 0.05):
+        flnm = "data/img/RML7/drf%.2f.csv"%rate
+        data = pd.read_csv(flnm)
+        rml7 = Evaluation(data, 147844)
+        print("----------ori", rate)
+        print("mota", rml7.mota)
+        print("idsw", rml7.idsw)
+        print("recall", rml7.recall)
+        print("f1_score", rml7.f1_score)

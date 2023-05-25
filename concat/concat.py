@@ -3,7 +3,9 @@ import cv2
 from nstransformer.model.exp_test import Exp_Test
 import numpy as np
 import pandas as pd
+from scipy.signal import savgol_filter
 from siamvgg.model.exp_siam import Exp_Siam
+from nstransformer.utils.tools import visual
 import torch
 
 
@@ -35,17 +37,17 @@ class Trackconcat():
     nstransformer去predict，提取obj
     找candidate， generate
     """
-    label_dict = {"HeadwaySpeed": ["date", "headway", "speed", "longitude", "distance"],
-                  "HeadwaySpeedAcc": ["date", "headway", "speed", "acceleration", "longitude", "distance"],
-                  "TTCSpeed": ["date", "ttc", "speed", "longitude", "distance"],
-                  "TTCSpeedAcc": ["date", "ttc", "speed", "acceleration", "longitude", "distance"],
-                  "withAcc": ["date", "acceleration", "longitude", "distance"],
+    label_dict = {"HeadwaySpeed": ["date", "headway", "speed", "longitude"],
+                  "HeadwaySpeedAcc": ["date", "headway", "speed", "acceleration", "longitude"],
+                  "TTCSpeed": ["date", "ttc", "speed", "longitude"],
+                  "TTCSpeedAcc": ["date", "ttc", "speed", "acceleration", "longitude"],
+                  "withAcc": ["date", "acceleration", "longitude"],
                   "withHeadway": ["date", "headway", "longitude"],
-                  "withLeaderPos": ["date", "leaderpos", "longitude", "distance"],
-                  "withSpeed": ["date", "speed", "longitude", "distance"],
-                  "withTTC": ["date", "ttc", "longitude", "distance"],
-                  "LeaderPosSpeed": ["date", "leaderpos", "speed", "longitude", "distance"],
-                  "LeaderPosSpeedAcc": ["date", "leaderpos", "speed", "acceleration", "longitude", "distance"],}
+                  "withLeaderPos": ["date", "leaderpos", "longitude"],
+                  "withSpeed": ["date", "speed", "longitude"],
+                  "withTTC": ["date", "ttc", "longitude", ],
+                  "LeaderPosSpeed": ["date", "leaderpos", "speed", "longitude"],
+                  "LeaderPosSpeedAcc": ["date", "leaderpos", "speed", "acceleration", "longitude"],}
 
 
     def __init__(self, args, params, dir, flnm, dis_th=5, r=2.0):
@@ -68,15 +70,13 @@ class Trackconcat():
         data = data.sort_values(by=["frame"], ascending=True)
         data = data.reset_index(drop=True)
         pre = data.loc[(data["frame"] <= frame) & (
-            data["frame"] >= frame - self.seq_len - 20)]
+            data["frame"] >= frame - self.seq_len - 20)].sort_values(by="frame")
         self.post = data.loc[(data["frame"] > frame) & (
-            data["frame"] <= frame + self.seq_len)]
+            data["frame"] <= frame + self.seq_len)].sort_values(by="frame")
         for id in break_list:
             tmp = pre.loc[pre["car_id"] == id][-self.seq_len:]
             lane = tmp["lane"].values[-1]
             img_id = tmp["gt_id"].values[-1]
-            tmp["date"] = np.arange(0, self.seq_len)
-            tmp["distance"] = tmp["longitude"].values - tmp["longitude"].values[0]
             tmp = tmp[self.label_dict[self.label]]
             tmp_dict = copy.deepcopy(tmp.to_dict(orient='list'))
             self.breaks.update(
@@ -120,21 +120,22 @@ class Trackconcat():
             dis = abs(group["longitude"][i] - refer_long)
             if dis > self.dis_th:
                 continue
-            cands.setdefault(group["car_id"][i],
+            cands.setdefault(int(group["car_id"][i]),
                              {"distance": self.dis_th,
                               "similarity": 0,
                               "adjust_dis": self.dis_th})
-            cands[group["car_id"][i]]["distance"] = min(
-                dis, cands[group["car_id"][i]]["distance"])
+
             candi_img = cv2.imread(self.dir+"\\%d.jpg" %
                                    group["gt_id"][i])  # 此处存疑2
             # 1. 可以考虑改成多候选一起, 2. gt_id 无真值测试时应是car_id,但是和图片对不上
-            smlr = self.siam.compare_candidates([candi_img])[0]
+            smlr = float(self.siam.compare_candidates([candi_img])[0])
             cands[group["car_id"][i]]["similarity"] = smlr
             adjust_dis = self._adjust(dis, smlr)
-            cands[group["car_id"][i]]["adjust_dis"] = adjust_dis
+            if adjust_dis < cands[group["car_id"][i]]["adjust_dis"]:
+                cands[group["car_id"][i]]["adjust_dis"] = adjust_dis
+                cands[group["car_id"][i]]["distance"] = dis
             if adjust_dis < min_dis:
-                select = group["car_id"][i]
+                select = int(group["car_id"][i])
                 min_dis = adjust_dis
         return cands, select
 
@@ -147,7 +148,7 @@ class Trackconcat():
         longitudes = date_seq * slope + intercept
         other_cols = set(input.columns) - set(["date", "longitude"])
         for col in other_cols:
-            pre = np.random.normal(input[col].mean(), input[col].std(), self.seq_len - len(input))
+            pre = np.random.normal(input[col].mean(), input[col].std()/2, self.seq_len - len(input))
             new_input[col] = np.append(pre, input[col])
         new_input["date"] = date_seq
         new_input["longitude"] = longitudes
@@ -159,6 +160,12 @@ class Trackconcat():
             return True, None
         input = self._extend(input)
         return False, input
+
+    def add_dis_date(self, input):
+        long_head = input["longitude"].values[0]
+        input["date"] = np.arange(0, self.seq_len)
+        input["distance"] = input["longitude"].values - long_head
+        return input
 
     def concat(self, frame, break_list):
         """
@@ -178,7 +185,11 @@ class Trackconcat():
                 if frag:
                     print("# not meet seq lenth key: ", key)
                     continue
-            output = self.nstrans.test(input) + input["longitude"].values[0]
+            input = self.add_dis_date(input)
+            start_long = float(input["longitude"].values[0])
+            label_long = input["longitude"].values.tolist()
+            output = savgol_filter((self.nstrans.test(input) + start_long), 51, 3)
+            visual(label_long + output.tolist(), name=".\\data\\EXP\\%s\\%d.jpg"%(self.label, key))
             torch.cuda.empty_cache()
             self.breaks[key]["predict"] = output.tolist()
 
