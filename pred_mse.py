@@ -133,8 +133,10 @@ def subplot_b_csv(flnm, labels):
     i = 0
     saves = dict()
     plt.figure()
-    order = ["HeadwaySpeedAcc", "LeaderPosSpeedAcc","TTCSpeedAcc", "TTCSpeed","withTTC", "LeaderPosSpeed", "withSpeed", "HeadwaySpeed", "withLeaderPos"] #, , # ,   ]  #  ,, 
-    # order = ["HeadwaySpeed"]
+    plt.grid(color='b', ls = '-.', lw = 0.25)
+    # order = ["HeadwaySpeedAcc", "LeaderPosSpeedAcc","TTCSpeedAcc", "TTCSpeed","withTTC", "LeaderPosSpeed", "withSpeed", "HeadwaySpeed", "withLeaderPos"] #, , # ,   ]  #  ,, 
+    order = ["LeaderPosSpeed", "withSpeed", "withHeadway", "HeadwaySpeed", "withLeaderPos"] #, , # ,   ]  #  ,, 
+
     num = len(order)
     for label in order:
         p, m = data[label+'P'].values, data[label+'M'].values
@@ -142,10 +144,11 @@ def subplot_b_csv(flnm, labels):
         i += 1
         plt.fill_between(np.arange(len(p)), p, m, alpha=(0.2+0.2*i/num), label=label, facecolor=c)
     plt.plot([0, len(p)], [0, 0], c="black", linewidth=1)
-    plt.plot([0, len(p)], [3, 3], c="black", linestyle="--", linewidth=0.5)
-    plt.plot([0, len(p)], [-3, -3], c="black", linestyle="--", linewidth=0.5)
+    plt.plot([0, len(p)], [5, 5], c="black", linestyle="--", linewidth=0.5)
+    plt.plot([0, len(p)], [-5, -5], c="black", linestyle="--", linewidth=0.5)
     plt.legend(loc="lower left")
-    # plt.xlim([0, 60])
+    plt.xlim([0, 90])
+    plt.ylim([-3, 3])
     plt.savefig("./data/img/total_error.png")
     plt.show()
 

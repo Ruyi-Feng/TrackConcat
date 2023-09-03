@@ -110,6 +110,9 @@ class Exp_concat():
                 continue
             print(i, break_lists[i])
             match = self.Tc.concat(i, break_lists[i])
+            """match structure
+            {id: {"lane": lane, "history": {}, "predict": [], "candidates": {}, "select": -1, "img_id": img_id}}
+            """
             # print("match:", match)
             self._save_match(i, match, rate)
             self._reid(match)

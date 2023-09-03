@@ -3,11 +3,11 @@ import pandas as pd
 
 def draw_sensitive(flnm):
     result = pd.read_csv(flnm)
-    fig, ax = plt.subplots(2, 2, figsize=(8, 8), dpi=150)
+    fig, ax = plt.subplots(2, 2, figsize=(6, 6), dpi=150)
     ax = ax.flatten()
-    result = result.sort_values(by="if_ori")
-    dic = {1: "original", 0: "completed"}
-    color = {1: "r", 0: "b"}
+    result = result.sort_values(by=["if_ori", "detect_rate"])
+    dic = {1: "original", 0: "completed", 2: "only predict"}
+    color = {1: "r", 0: "b", 2: "c"}
     for if_ori, data in result.groupby(result["if_ori"]):
         cols =  data.columns
         for i in range(1, len(cols)-1):
@@ -18,7 +18,7 @@ def draw_sensitive(flnm):
             if i != 2:
                 ax[i-1].set_ylim((0, 1))
             else:
-                ax[i-1].set_ylim((0, 1500))
+                ax[i-1].set_ylim((0, 2100))
     plt.show()
 
 if __name__ == '__main__':

@@ -36,11 +36,11 @@ class Evaluation:
 
 
 if __name__ == '__main__':
-    for rate in np.arange(0.7, 0.9, 0.05):
+    for rate in np.arange(0.4, 0.45, 0.05):
         flnm = "data/img/RML7/drf%.2f.csv"%rate
         data = pd.read_csv(flnm)
         rml7 = Evaluation(data, 147844)
-        print("----------ori", rate)
+        print("----------", rate)
         print("mota", rml7.mota)
         print("idsw", rml7.idsw)
         print("recall", rml7.recall)

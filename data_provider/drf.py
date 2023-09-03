@@ -59,7 +59,7 @@ def rand_del(data, del_num, del_length, min_interval):
         data = data.drop(index=seq)
     return data
 
-def drf(gt_flnm, outflnm, drf_rate, del_length=40, min_interval=96):
+def drf(gt_flnm, outflnm, drf_rate, del_length=40, min_interval=66):
     data = pd.read_csv(gt_flnm)
     data["gt_id"] = data["car_id"]
     del_num = int(len(data) * (1 - drf_rate) / del_length)
@@ -74,7 +74,7 @@ def drf(gt_flnm, outflnm, drf_rate, del_length=40, min_interval=96):
 
 if __name__ == '__main__':
 
-    for drf_rate in np.arange(0.6, 0.95, 0.05):
+    for drf_rate in np.arange(0.4, 0.6, 0.05):
         gt_flnm = "data/img/RML7/packed.csv"
         outflnm = "data/img/RML7/drf%.2f.csv"%drf_rate
         data = drf(gt_flnm, outflnm, drf_rate)
