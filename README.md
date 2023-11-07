@@ -1,7 +1,7 @@
 # TrackConcat
 This project aims for broken trajectory concatenation through a joint model of NS_Transformer and Siamese-VGG16.
 
-
+Under Review, Just For Display
 
 ## Framework
 1. time-space（NS-Transformer）
@@ -27,5 +27,6 @@ This project aims for broken trajectory concatenation through a joint model of N
 - refreashed csv with trajetcories matched and gap completed
 
 ## Paper
-### A Joint Spatiotemporal Prediction and Image Confirmation Model for Vehicle Trajectory Concatenation  with Low Detection Rates
-Abstract: This paper proposes a concatenation method adapted to low detection rate. In the proposed method, a location fused Transformer are arranged for predicting future possible range with consideration of dynamic of traffic flow. All candidates within the predicted range are assigned an initial confidence. Then, convolutional based algorithm generates image similarity between candidates to adjusting the confidence, realizing concatenation with a fusion of time-spatial and image features. The structure of the remaining of this paper follows: Section 2 introduces detailed algorithm modules of range prediction and similarity adjustment. Section 3 presents the scenarios and basic data for the experimental design. Section 4 analyzes experimental results separately of modules and equipped a sensitivity analysis. Section 5 discusses and summarizes the contribution and application prospects.
+### A Joint Spatiotemporal Prediction and Image Confirmation Model for Vehicle Trajectory Concatenation with Low Detection Rates
+### under review
+Ensuring the quality of trajectories is of utmost importance in traffic flow analysis. Traditional approaches rely on reconstructing nearly complete trajectories and subsequently denoising them. However, low detection rates often pose challenges and result in failed trajectory construction. To overcome this issue, this paper presents a trajectory concatenation method that combines NS Transformer prediction and Siamese-VGG16 similarity confirmation, specifically designed to address low detection rates. The employed transformer model is effective in mining internal associations and assessing the contributions of multiple traffic parameters. Furthermore, a lightweight image feature similarity verification step is integrated after trajectory prediction to find the most similar target to the image in the predicted spatiotemporal domain. Additionally, a lightweight image feature similarity verification step is integrated after trajectory prediction to identify the most similar targets within the predicted spatiotemporal domain. Experimental results demonstrate the efficacy of the proposed method, successfully connecting over 80\% of fragmented tracks and yielding significant maintenance of MOTA above 0.62 under low detection accuracy.

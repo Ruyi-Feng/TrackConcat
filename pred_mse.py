@@ -136,10 +136,12 @@ def subplot_b_csv(flnm, labels):
     data = pd.read_csv(flnm)
     i = 0
     saves = dict()
-    plt.figure(figsize=(4, 4), dpi=150)
-    order = ["LeaderPosSpeedAcc","TTCSpeedAcc", "TTCSpeed","withTTC", "LeaderPosSpeed", "withSpeed", "withHeadway", "HeadwaySpeed", "withLeaderPos"] #, , # ,   ]  #  ,, 
-    # order = ["HeadwaySpeed"]
-    num = len(labels)
+    plt.figure()
+    plt.grid(color='b', ls = '-.', lw = 0.25)
+    # order = ["HeadwaySpeedAcc", "LeaderPosSpeedAcc","TTCSpeedAcc", "TTCSpeed","withTTC", "LeaderPosSpeed", "withSpeed", "HeadwaySpeed", "withLeaderPos"] #, , # ,   ]  #  ,, 
+    order = ["LeaderPosSpeed", "withSpeed", "withHeadway", "HeadwaySpeed", "withLeaderPos"] #, , # ,   ]  #  ,, 
+
+    num = len(order)
     for label in order:
         if label not in labels:
             continue
@@ -151,7 +153,8 @@ def subplot_b_csv(flnm, labels):
     plt.plot([0, len(p)], [5, 5], c="black", linestyle="--", linewidth=0.5)
     plt.plot([0, len(p)], [-5, -5], c="black", linestyle="--", linewidth=0.5)
     plt.legend(loc="lower left")
-    # plt.xlim([0, 60])
+    plt.xlim([0, 90])
+    plt.ylim([-3, 3])
     plt.savefig("./data/img/total_error.png")
     plt.show()
 

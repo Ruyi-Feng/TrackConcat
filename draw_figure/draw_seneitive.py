@@ -3,7 +3,7 @@ import pandas as pd
 
 def draw_sensitive(flnm):
     result = pd.read_csv(flnm)
-    fig, ax = plt.subplots(2, 2, figsize=(8, 8), dpi=150)
+    fig, ax = plt.subplots(2, 2, figsize=(6, 6), dpi=150)
     ax = ax.flatten()
     result = result.sort_values(by="if_ori")
     dic = {0: "original", 1: "completed", 2: "without similarity", 3: "TD Tree"}
@@ -21,7 +21,7 @@ def draw_sensitive(flnm):
             elif i != 2:
                 ax[i-1].set_ylim((0, 1))
             else:
-                ax[i-1].set_ylim((0, 1500))
+                ax[i-1].set_ylim((0, 2100))
     plt.show()
 
 if __name__ == '__main__':
