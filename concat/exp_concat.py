@@ -14,6 +14,7 @@ class Exp_concat():
 
     def __init__(self, args, params, dir, flnm, dis_th=5, r=1.5, bound=150):
         self.Tc = Trackconcat(args, params, dir, flnm, dis_th, r)
+        self.r = r
         self.clp = Completion()
         self.flnm = dir + "\\" + flnm
         self.seq_len = args.seq_len  # 作为循环起点，保证历史数据的完整
@@ -85,7 +86,7 @@ class Exp_concat():
             "candidates": {candi_1: {"distance": 10, "similarity": 0.5, "adjust_dis": 5}, },
             "select": -1, "img_id": gt_id}}
         """
-        flnm = ".\\data\\img\\match%.2f.json"%rate
+        flnm = ".\\data\\img\\RML7\\Dice-comp\\match%.2f_r%.2f.json"%(rate, self.r)
         with open(flnm, 'r') as load_f:
             info = json.load(load_f)
         for k in match:
@@ -116,7 +117,7 @@ class Exp_concat():
             # print("match:", match)
             self._save_match(i, match, rate)
             self._reid(match)
-            print("ids:", self.ids)
+            # print("ids:", self.ids)
         # 对ID已经match但有缺口的补全
         self._refreash()
         self._fill_gap()
