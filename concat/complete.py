@@ -68,7 +68,7 @@ class Completion:
         # filling=polyfit，则使用三次插值计算（至少4个点）
         # 一共4-6个点，断裂点前至少1个，断后+断前至少4个。
         # 控制fit后的第一阶段系数，[-3, 3]
-        new_group = pd.DataFrame()  # new_group 中总是连续更新到最新一时刻的
+        new_group = np.empty(shape=(0, len(track.columns)))  # new_group 中总是连续更新到最新一时刻的
         end = -1
         for i in range(len(track)):
             if track["if_fill"][i] == -1:
@@ -78,9 +78,9 @@ class Completion:
                 if end == -1:
                     continue
                 frag = self._fit(track, head, end)
-                new_group = new_group.append(frag)
-            new_group = new_group.append(track.iloc[i])
-        return new_group
+                new_group = np.concatenate([new_group, frag.values], axis=0)
+            new_group = np.concatenate([new_group, [track.iloc[i].values]], axis=0)
+        return pd.DataFrame(new_group, columns=track.columns)
 
     def _check_fragments(self, track):
         # 给轨迹长段头标1尾标-1，删除短的。
