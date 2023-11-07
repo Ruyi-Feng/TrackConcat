@@ -7,6 +7,7 @@ from nstransformer.utils.tools import visual
 import numpy as np
 import os
 import pandas as pd
+from scipy.signal import savgol_filter
 import torch
 matplotlib.use('Qt5Agg')
 
@@ -36,7 +37,7 @@ def predict(exp, data, seq_len, dir, i):
 
     output = exp.test(input)
     torch.cuda.empty_cache()
-    offset = true_value - output
+    offset = true_value - savgol_filter(output, 51, 3)
     if i % 200 == 0:
         visual(true_value, output, name=dir+"//fig//%d.jpg"%i)
     return offset
@@ -120,10 +121,13 @@ def typical_predict(labels, i):
 
 def subplot_a(labels, i):
     lines = typical_predict(labels, i)
-    plt.figure()
+    plt.figure(figsize=(4, 4), dpi=150)
     for label in lines:
-        plt.plot(lines[label], label=label)
-    plt.fill_between(np.arange(len(lines["groundtruth"])), lines["groundtruth"] - 3, lines["groundtruth"] + 3, alpha=0.2)
+        if label == "groundtruth":
+            plt.plot(savgol_filter(lines[label], 51, 3), ':', label=label, c='c', linewidth=2)
+            continue
+        plt.plot(savgol_filter(lines[label], 51, 3), label=label)
+    plt.fill_between(np.arange(len(lines["groundtruth"])), lines["groundtruth"] - 5, lines["groundtruth"] + 5, alpha=0.2)
     plt.legend()
     plt.show()
 
@@ -132,37 +136,43 @@ def subplot_b_csv(flnm, labels):
     data = pd.read_csv(flnm)
     i = 0
     saves = dict()
-    plt.figure()
-    order = ["HeadwaySpeedAcc", "LeaderPosSpeedAcc","TTCSpeedAcc", "TTCSpeed","withTTC", "LeaderPosSpeed", "withSpeed", "HeadwaySpeed", "withLeaderPos"] #, , # ,   ]  #  ,, 
+    plt.figure(figsize=(4, 4), dpi=150)
+    order = ["LeaderPosSpeedAcc","TTCSpeedAcc", "TTCSpeed","withTTC", "LeaderPosSpeed", "withSpeed", "withHeadway", "HeadwaySpeed", "withLeaderPos"] #, , # ,   ]  #  ,, 
     # order = ["HeadwaySpeed"]
-    num = len(order)
+    num = len(labels)
     for label in order:
+        if label not in labels:
+            continue
         p, m = data[label+'P'].values, data[label+'M'].values
         c = plt.cm.jet(i / num)
         i += 1
         plt.fill_between(np.arange(len(p)), p, m, alpha=(0.2+0.2*i/num), label=label, facecolor=c)
     plt.plot([0, len(p)], [0, 0], c="black", linewidth=1)
-    plt.plot([0, len(p)], [3, 3], c="black", linestyle="--", linewidth=0.5)
-    plt.plot([0, len(p)], [-3, -3], c="black", linestyle="--", linewidth=0.5)
+    plt.plot([0, len(p)], [5, 5], c="black", linestyle="--", linewidth=0.5)
+    plt.plot([0, len(p)], [-5, -5], c="black", linestyle="--", linewidth=0.5)
     plt.legend(loc="lower left")
     # plt.xlim([0, 60])
     plt.savefig("./data/img/total_error.png")
     plt.show()
 
 if __name__ == '__main__':
-    labels = {"LeaderPosSpeedAcc": 5,
-              "HeadwaySpeed": 4,
-              "HeadwaySpeedAcc": 5,
-              "TTCSpeed": 4,
-              "onlyLong": 2,
-              "TTCSpeedAcc": 5,
-              "withAcc": 3,
+    labels = {"HeadwaySpeed": 4,
               "withHeadway": 3,
               "withLeaderPos": 3,
               "withSpeed": 3,
-              "withTTC": 3,
               "LeaderPosSpeed": 4}
-    # labels = {"HeadwaySpeed": 4}
+    # labels = {"LeaderPosSpeedAcc": 5,
+    #           "HeadwaySpeed": 4,
+    #           "HeadwaySpeedAcc": 5,
+    #           "TTCSpeed": 4,
+    #           "onlyLong": 2,
+    #           "TTCSpeedAcc": 5,
+    #           "withAcc": 3,
+    #           "withHeadway": 3,
+    #           "withLeaderPos": 3,
+    #           "withSpeed": 3,
+    #           "withTTC": 3,
+    #           "LeaderPosSpeed": 4}
 
     # generate evaluation
     error_flnm = ".//data//img//total_error.csv"
@@ -182,5 +192,5 @@ if __name__ == '__main__':
     #          "withSpeed": 3,
     #          "withTTC": 3}
 
-    # subplot_a(labels, 89)
+    # subplot_a(labels, 108)
     subplot_b_csv(error_flnm, labels)

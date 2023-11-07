@@ -27,7 +27,7 @@ class Evaluation:
                 self.tp += len(gt_rows)
                 self.idsw += len(set(gt_rows["car_id"])) - 1
 
-        self.fp = len(data[data["gt_id"] == -1])
+        self.fp = len(data[data["gt_id"] == -1]) + self.idsw * 60
         self.fn = self.gt - self.tp
         self.precision = 1.0 * self.tp / (self.tp + self.fp) if self.tp + self.fp > 0 else 0
         self.recall = 1.0 * self.tp / (self.tp + self.fn) if self.tp + self.fn > 0 else 0
@@ -36,12 +36,11 @@ class Evaluation:
 
 
 if __name__ == '__main__':
-    for rate in np.arange(0.7, 0.9, 0.05):
-        flnm = "data/img/RML7/drf%.2f.csv"%rate
+    print("----------csv-comp")
+    print("      mota\tidsw\trecall\tf1_score")
+    for rate in np.arange(0.40, 0.95, 0.05):
+        flnm = "data/img/RML7/csv-comp/drf%.2f.csv"%rate
         data = pd.read_csv(flnm)
         rml7 = Evaluation(data, 147844)
-        print("----------ori", rate)
-        print("mota", rml7.mota)
-        print("idsw", rml7.idsw)
-        print("recall", rml7.recall)
-        print("f1_score", rml7.f1_score)
+        print("%.2f\t%.2f\t%d\t %.2f \t%.2f\t%.2f\t%.2f"%(rate, rml7.mota, rml7.idsw, rml7.recall, rml7.f1_score, rml7.fp, rml7.fn))
+

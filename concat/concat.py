@@ -51,6 +51,7 @@ class Trackconcat():
 
 
     def __init__(self, args, params, dir, flnm, dis_th=5, r=2.0):
+        self.tdTree = False
         self.siam = Exp_Siam(params)
         self.nstrans = Exp_Test(args)
         self.dir = dir
@@ -116,10 +117,16 @@ class Trackconcat():
         for i in range(len(group)):
             if group["frame"][i] - frame >= self.seq_len:
                 continue
-            refer_long = output[group["frame"][i] - frame]
-            dis = abs(group["longitude"][i] - refer_long)
-            if dis > self.dis_th:
-                continue
+            if self.tdTree:
+                refer_long = output[0]
+                dis = group["longitude"][i] - refer_long + (group["frame"][i] - frame) * 0.05
+                if dis > self.dis_th or (group["longitude"][i] - refer_long) < 0:
+                    continue
+            else:
+                refer_long = output[group["frame"][i] - frame]
+                dis = abs(group["longitude"][i] - refer_long)
+                if dis > self.dis_th:
+                    continue
             cands.setdefault(int(group["car_id"][i]),
                              {"distance": self.dis_th,
                               "similarity": 0,
@@ -128,7 +135,10 @@ class Trackconcat():
             candi_img = cv2.imread(self.dir+"\\%d.jpg" %
                                    group["gt_id"][i])  # 此处存疑2
             # 1. 可以考虑改成多候选一起, 2. gt_id 无真值测试时应是car_id,但是和图片对不上
-            smlr = float(self.siam.compare_candidates([candi_img])[0])
+            if self.tdTree:
+                smlr = 0.5
+            else:
+                smlr = float(self.siam.compare_candidates([candi_img])[0])
             cands[group["car_id"][i]]["similarity"] = smlr
             adjust_dis = self._adjust(dis, smlr)
             if adjust_dis < cands[group["car_id"][i]]["adjust_dis"]:
@@ -188,14 +198,18 @@ class Trackconcat():
             input = self.add_dis_date(input)
             start_long = float(input["longitude"].values[0])
             label_long = input["longitude"].values.tolist()
-            output = savgol_filter((self.nstrans.test(input) + start_long), 51, 3)
-            visual(label_long + output.tolist(), name=".\\data\\EXP\\%s\\%d.jpg"%(self.label, key))
+            if self.tdTree:
+                output = [float(input["longitude"].values[-1])]
+            else:
+                output = savgol_filter((self.nstrans.test(input) + start_long), 51, 3)
+            # visual(label_long + output.tolist(), name=".\\data\\EXP\\%s\\%d.jpg"%(self.label, key))
             torch.cuda.empty_cache()
-            self.breaks[key]["predict"] = output.tolist()
+            self.breaks[key]["predict"] = output if self.tdTree else output.tolist()
 
             # --- generate image feature ---
-            img_refer = cv2.imread(self.dir+"//%d.jpg" % self.breaks[key]["img_id"])
-            self.siam.define_refer(img_refer)
+            if not self.tdTree:
+                img_refer = cv2.imread(self.dir+"//%d.jpg" % self.breaks[key]["img_id"])
+                self.siam.define_refer(img_refer)
 
             # --- generate candidate ---
             candidates, select = self._candi(
