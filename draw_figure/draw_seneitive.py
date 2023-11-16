@@ -25,5 +25,5 @@ def draw_sensitive(flnm):
     plt.show()
 
 if __name__ == '__main__':
-    flnm = "C:\\Users\\USER\\Nutstore\\1\\Notes and Half working\\LAB\\UTEpaper\\mota_result-a.csv"
+    flnm = ".\\data\\img\\mota_result.csv"
     draw_sensitive(flnm)

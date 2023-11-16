@@ -62,7 +62,7 @@ class Completion:
         extra = col - {"frame", "longitude", "latitude", "width", "length", "if_fill"}
         for label in extra:
             fragment[label] = track[label][end]
-        return fragment
+        return fragment[track.columns]
 
     def _fill_blank(self, track):
         # filling=polyfit，则使用三次插值计算（至少4个点）
