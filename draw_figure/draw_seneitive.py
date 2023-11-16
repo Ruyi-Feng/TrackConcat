@@ -6,8 +6,8 @@ def draw_sensitive(flnm):
     fig, ax = plt.subplots(2, 2, figsize=(6, 6), dpi=150)
     ax = ax.flatten()
     result = result.sort_values(by="if_ori")
-    dic = {0: "original", 1: "completed", 2: "without similarity", 3: "TD Tree"}
-    color = {1: "r", 0: "b", 2: "c", 3: "g"}
+    dic = {0: "original", 1: "BCE-completed", 2: "without similarity", 3: "TD Tree", 4:"Dice-completed"}
+    color = {1: "r", 0: "b", 2: "c", 3: "g", 4: "orange"}
     for if_ori, data in result.groupby(result["if_ori"]):
         data = data.sort_values(by="detect_rate")
         cols =  data.columns
@@ -16,7 +16,7 @@ def draw_sensitive(flnm):
             # ax[i-1].title()
             ax[i-1].grid(True)
             ax[i-1].legend()
-            if i == 0:
+            if i == 1:
                 ax[i-1].set_ylim((-1, 1))
             elif i != 2:
                 ax[i-1].set_ylim((0, 1))
@@ -25,5 +25,5 @@ def draw_sensitive(flnm):
     plt.show()
 
 if __name__ == '__main__':
-    flnm = ".\\data\\img\\mota_result.csv"
+    flnm = "C:\\Users\\USER\\Nutstore\\1\\Notes and Half working\\LAB\\UTEpaper\\mota_result-a.csv"
     draw_sensitive(flnm)

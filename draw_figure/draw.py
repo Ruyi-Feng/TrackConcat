@@ -6,22 +6,29 @@ Created on Wed Mar  9 18:41:22 2022
 import pandas as pd
 from matplotlib import pyplot as plt
 import matplotlib.cm as cm
-from nstransformer.model.exp_test import Exp_Test
-from nstransformer.utils.param import param
+import matplotlib
+# from nstransformer.model.exp_test import Exp_Test
+# from nstransformer.utils.param import param
 import torch
 import numpy as np
 from scipy.signal import savgol_filter
+matplotlib.use('Qt5Agg')
 
 Frameindex = "frame"
 Timeindex = "time"
 CarIDindex = "car_id"
-Laneindex = "lane_id"
+Laneindex = "lane"
 Xindex = "longitude"
 Yindex = "latitude"
 Spdindex = "speed"
 Windex = "length"
 Hindex = "width"
-
+# Frameindex = "frameNum"
+# CarIDindex = "carId"
+# Laneindex = "laneId"
+# Xindex = "carCenterXft"
+# Yindex = "carCenterYft"
+# Spdindex = "speed"
 def draw_timespace(flnm, section_length, time_range=(0,0)):
     df = pd.read_csv(flnm)
     data = df.sort_values(by=[Laneindex, CarIDindex, Frameindex],
@@ -41,6 +48,8 @@ def draw_timespace(flnm, section_length, time_range=(0,0)):
         plt.ylim((85, 105))
         plt.title("lane: %d"%lane)
         plt.colorbar()
+        plt.show()
+        # plt.savefig(".\\data\\img\\%d.jpg"%lane)
     print("finish draw!")
 
 def formation(input):
