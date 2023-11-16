@@ -86,7 +86,7 @@ class Exp_concat():
             "candidates": {candi_1: {"distance": 10, "similarity": 0.5, "adjust_dis": 5}, },
             "select": -1, "img_id": gt_id}}
         """
-        flnm = ".\\data\\img\\RML7\\Dice-comp\\match%.2f_r%.2f.json"%(rate, self.r)
+        flnm = ".\\data\\img\\RML7\\Dice-comp\\match%.2f.json"%(rate)   #_r%.2f, self.r
         with open(flnm, 'r') as load_f:
             info = json.load(load_f)
         for k in match:

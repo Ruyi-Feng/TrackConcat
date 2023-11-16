@@ -85,7 +85,7 @@ class Trackconcat():
             self.breaks[id]["history"].update(tmp_dict)
 
     def _adjust(self, dis, smlr):
-        return dis * (1 - smlr / self.r)
+        return dis * (1 - smlr) / self.r
 
     def _candi(self, frame, output, lane):
         """
