@@ -19,7 +19,7 @@ def shot_track(flnm, videonm, save_dir):
     data.reset_index(drop=True)
     cap = cv2.VideoCapture(videonm)
     video_frame = 0
-    last_id = {}
+    last_id = set()
     for frame, group in data.groupby(data[0]):
         while video_frame < frame:
             ret, img = cap.read()

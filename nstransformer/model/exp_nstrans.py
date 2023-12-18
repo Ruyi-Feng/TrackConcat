@@ -14,9 +14,9 @@ import warnings
 warnings.filterwarnings('ignore')
 
 
-class Exp_Test(Exp_Basic):
+class Exp_NSTrans(Exp_Basic):
     def __init__(self, args):
-        super(Exp_Test, self).__init__(args)
+        super(Exp_NSTrans, self).__init__(args)
         self.timeenc = 0 if self.args.embed != 'timeF' else 1
         self.label = args.label
         print('loading model')
@@ -121,3 +121,26 @@ class Exp_Test(Exp_Basic):
         # preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1])
 
         return preds
+
+class Exp_Linear:
+    def __init__(self, args):
+        self.args = args
+
+    def _fit(self, k, b, l):
+        y_head = (l + 1) * k + b
+        y_end = (l + self.args.pred_len) * k + b
+        return np.linspace(y_head, y_end, self.pred_len)
+
+    def test(self, seq):
+        """test func
+
+        seq: np.array
+        需要预测的输入数据
+        """
+        if len(seq) < 1:
+            return seq[0] * np.ones((self.args.pred_len))
+        b = seq[0]
+        k = (seq[-1] - seq[0]) / len(seq)
+        output = self._fit(k, b, len(seq))
+        return output.tolist()
+

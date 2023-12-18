@@ -1,6 +1,6 @@
 import copy
 import cv2
-from nstransformer.model.exp_test import Exp_Test
+from nstransformer.model.exp_nstrans import Exp_NSTrans, Exp_Linear
 import numpy as np
 import pandas as pd
 from scipy.signal import savgol_filter
@@ -51,13 +51,15 @@ class Trackconcat():
 
 
     def __init__(self, args, params, dir, flnm, dis_th=5, r=2.0):
-        self.tdTree = False
+        self.only_predict = False
         self.siam = Exp_Siam(params)
-        self.nstrans = Exp_Test(args)
+        self.nstrans = Exp_NSTrans(args)
+        self.linear_pred = Exp_Linear
         self.dir = dir
         self.flnm = dir + "\\" + flnm
         self.seq_len = args.seq_len
         self.label = args.label
+        self.pred_type = args.pred_type
         self.dis_th = dis_th
         self.r = r
 
@@ -117,7 +119,7 @@ class Trackconcat():
         for i in range(len(group)):
             if group["frame"][i] - frame >= self.seq_len:
                 continue
-            if self.tdTree:
+            if self.only_predict or (self.pred_type == "use_last_pos"):
                 refer_long = output[0]
                 dis = group["longitude"][i] - refer_long + (group["frame"][i] - frame) * 0.05
                 if dis > self.dis_th or (group["longitude"][i] - refer_long) < 0:
@@ -132,10 +134,10 @@ class Trackconcat():
                               "similarity": 0,
                               "adjust_dis": self.dis_th})
 
-            candi_img = cv2.imread(self.dir+"\\%d.jpg" %
+            candi_img = cv2.imread(self.dir+"img\\%d.jpg" %
                                    group["gt_id"][i])  # 此处存疑2
             # 1. 可以考虑改成多候选一起, 2. gt_id 无真值测试时应是car_id,但是和图片对不上
-            if self.tdTree:
+            if self.only_predict:
                 smlr = 0.5
             else:
                 smlr = float(self.siam.compare_candidates([candi_img])[0])
@@ -177,6 +179,19 @@ class Trackconcat():
         input["distance"] = input["longitude"].values - long_head
         return input
 
+    def _fill_predict(self, input) -> list:
+        if self.pred_type == "use_last_pos":
+            output = [float(input["longitude"].values[-1])]
+        if self.pred_type == "nsTransformer":
+            start_long = float(input["longitude"].values[0])
+            label_long = input["longitude"].values.tolist()
+            output = savgol_filter((self.nstrans.test(input) + start_long), 51, 3).tolist()
+            # visual(label_long + output.tolist(), name=".\\data\\EXP\\%s\\%d.jpg"%(self.label, key))
+        if self.pred_type == "linear":
+            output = self.linear_pred.test(input["longtitude"].values)
+        self.breaks[key]["predict"] = output
+
+
     def concat(self, frame, break_list):
         """
         frame: int
@@ -196,19 +211,12 @@ class Trackconcat():
                     print("# not meet seq lenth key: ", key)
                     continue
             input = self.add_dis_date(input)
-            start_long = float(input["longitude"].values[0])
-            label_long = input["longitude"].values.tolist()
-            if self.tdTree:
-                output = [float(input["longitude"].values[-1])]
-            else:
-                output = savgol_filter((self.nstrans.test(input) + start_long), 51, 3)
-            # visual(label_long + output.tolist(), name=".\\data\\EXP\\%s\\%d.jpg"%(self.label, key))
+            output = self._fill_predict(input)
             torch.cuda.empty_cache()
-            self.breaks[key]["predict"] = output if self.tdTree else output.tolist()
 
             # --- generate image feature ---
-            if not self.tdTree:
-                img_refer = cv2.imread(self.dir+"//%d.jpg" % self.breaks[key]["img_id"])
+            if not self.only_predict:
+                img_refer = cv2.imread(self.dir+"img\\%d.jpg" % self.breaks[key]["img_id"])
                 self.siam.define_refer(img_refer)
 
             # --- generate candidate ---
