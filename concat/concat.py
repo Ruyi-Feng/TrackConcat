@@ -53,8 +53,10 @@ class Trackconcat():
     def __init__(self, args, params, dir, flnm, dis_th=5, r=2.0):
         self.only_predict = False
         self.siam = Exp_Siam(params)
-        self.nstrans = Exp_NSTrans(args)
-        self.linear_pred = Exp_Linear
+        if args.pred_type == "nsTransformer":
+            self.nstrans = Exp_NSTrans(args)
+        if args.pred_type == "linear":
+            self.linear_pred = Exp_Linear(args)
         self.dir = dir
         self.flnm = dir + "\\" + flnm
         self.seq_len = args.seq_len
@@ -119,13 +121,13 @@ class Trackconcat():
         for i in range(len(group)):
             if group["frame"][i] - frame >= self.seq_len:
                 continue
-            if self.only_predict or (self.pred_type == "use_last_pos"):
+            if self.pred_type == "use_last_pos":
                 refer_long = output[0]
-                dis = group["longitude"][i] - refer_long + (group["frame"][i] - frame) * 0.05
+                dis = group["longitude"][i] - refer_long  # + (group["frame"][i] - frame) * 0.05
                 if dis > self.dis_th or (group["longitude"][i] - refer_long) < 0:
                     continue
             else:
-                refer_long = output[group["frame"][i] - frame]
+                refer_long = output[int(group["frame"][i] - frame)]
                 dis = abs(group["longitude"][i] - refer_long)
                 if dis > self.dis_th:
                     continue
@@ -167,7 +169,7 @@ class Trackconcat():
         return new_input
 
     def _extend_input(self, input, key):
-        if len(input) < 0.2 * self.seq_len:
+        if len(input) < 3:  # 0.2 * self.seq_len:
             self.breaks[key]["select"] = key
             return True, None
         input = self._extend(input)
@@ -179,7 +181,7 @@ class Trackconcat():
         input["distance"] = input["longitude"].values - long_head
         return input
 
-    def _fill_predict(self, input) -> list:
+    def _fill_predict(self, input, key) -> list:
         if self.pred_type == "use_last_pos":
             output = [float(input["longitude"].values[-1])]
         if self.pred_type == "nsTransformer":
@@ -188,8 +190,9 @@ class Trackconcat():
             output = savgol_filter((self.nstrans.test(input) + start_long), 51, 3).tolist()
             # visual(label_long + output.tolist(), name=".\\data\\EXP\\%s\\%d.jpg"%(self.label, key))
         if self.pred_type == "linear":
-            output = self.linear_pred.test(input["longtitude"].values)
+            output = self.linear_pred.test(input["longitude"].values)
         self.breaks[key]["predict"] = output
+        return output
 
 
     def concat(self, frame, break_list):
@@ -211,7 +214,7 @@ class Trackconcat():
                     print("# not meet seq lenth key: ", key)
                     continue
             input = self.add_dis_date(input)
-            output = self._fill_predict(input)
+            output = self._fill_predict(input, key)
             torch.cuda.empty_cache()
 
             # --- generate image feature ---

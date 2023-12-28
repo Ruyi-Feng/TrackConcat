@@ -42,7 +42,7 @@ class Exp_concat():
             gone = last_idset - idset
             for k in gone:
                 if last_group.loc[last_group["car_id"] == k]["longitude"].values < self.bound:
-                    break_list[frame-1].append(k)
+                    break_list[int(frame-1)].append(k)
             last_idset = idset
             last_group = group
         return break_list
