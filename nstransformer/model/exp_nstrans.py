@@ -129,7 +129,7 @@ class Exp_Linear:
     def _fit(self, k, b, l):
         y_head = (l + 1) * k + b
         y_end = (l + self.args.pred_len) * k + b
-        return np.linspace(y_head, y_end, self.pred_len)
+        return np.linspace(y_head, y_end, self.args.pred_len)
 
     def test(self, seq):
         """test func

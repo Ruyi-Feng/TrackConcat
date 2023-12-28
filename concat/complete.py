@@ -121,7 +121,7 @@ class Completion:
             group = group.sort_values(by=["frame"])  # 按照frame排序
             group = group.reset_index(drop=True)
             # 删除短的
-            if len(group) < 30:
+            if len(group) < 5:
                 continue
             # 直接加入完整的
             if group["frame"][len(group)-1] - group["frame"][0] + 1 <= len(group):
