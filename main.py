@@ -25,5 +25,5 @@ if __name__ == '__main__':
     # print("done!")
 
     flnm = "packed-rml9.csv"
-    concat = Exp_concat(args, params, dir, flnm, r=1.0)
+    concat = Exp_concat(args, params, dir, flnm, dis_th=8, r=1.0)
     concat.run(1.0)
